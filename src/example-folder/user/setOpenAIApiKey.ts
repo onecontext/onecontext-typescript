@@ -1,4 +1,4 @@
-import ocClient from '../../construct';
+import ocClient from '../construct.js';
 
 try {
   ocClient.setOpenAIApiKey({

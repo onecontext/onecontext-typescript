@@ -1,11 +1,11 @@
-import ocClient from '../../../construct.js';
+import ocClient from '../../construct.js';
 
 try {
   const result = await ocClient.deleteContext(
-    {contextName: "contextName"}
+    {contextName: "example"}
   )
   if (result.ok) {
-    await result.json().then((data) => console.log('Context deleted:', data));
+    await result.json().then((data: any) => console.log('Context deleted:', data));
   } else {
     console.error('Error deleting context');
   }

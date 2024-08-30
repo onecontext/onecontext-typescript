@@ -6,11 +6,12 @@
     "target": "es2020",
     "moduleResolution": "NodeNext",
     "sourceMap": true,
-    "outDir": "dist",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,
     "declarationMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "lib": [
       "es2015"
     ]

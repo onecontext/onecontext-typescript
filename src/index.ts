@@ -1,6 +1,7 @@
 import fetch, {RequestInit, Response} from 'node-fetch';
 import FormData from 'form-data';
 import {promises as fs} from 'fs';
+import { createReadStream } from 'fs';
 import * as path from "path";
 import * as inputTypes from "./types/inputs.js";
 import {Readable} from "stream";
@@ -221,6 +222,28 @@ export class OneContextClient {
       body: JSON.stringify(args),
     });
   }
+  
+  private async * fileGenerator(directory: string) {
+    async function* walkDirectory(dir: string): AsyncGenerator<{ path: string, name: string }> {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          yield* walkDirectory(fullPath);
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if ([".txt", ".pdf", ".docx", ".doc"].includes(ext)) {
+            yield { path: fullPath, name: path.relative(directory, fullPath) };
+          }
+        }
+      }
+    }
+
+    for await (const file of walkDirectory(directory)) {
+      const stream = createReadStream(file.path);
+      yield { stream, name: file.name };
+    }
+  }
 
 
   /**
@@ -234,6 +257,7 @@ export class OneContextClient {
    *  ocClient.uploadDirectory({
    *    directory: "/Path/to/User/Directory",
    *    contextName: "contextName",
+   *    maxChunkSize: 400
    *  }).then((res) => {
    *    if (res.ok) {
    *      res.json().then((data) => console.log('Directory uploaded:', data));
@@ -248,32 +272,12 @@ export class OneContextClient {
   async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
     const formData = new FormData();
 
-    async function processDirectory(directory: string) {
-      const entries = await fs.readdir(directory, {withFileTypes: true});
-
-      for (const entry of entries) {
-        const fullPath = path.join(directory, entry.name);
-
-        if (entry.isDirectory()) {
-          // Recursively process subdirectories
-          await processDirectory(fullPath);
-        } else if (entry.isFile()) {
-          const ext = path.extname(entry.name).toLowerCase();
-          if ([".txt", ".pdf", ".docx", ".doc"].includes(ext)) {
-            const fileStream = await fs.readFile(fullPath);
-            // Use relative path from the root directory as the file name
-            const relativePath = path.relative(args.directory, fullPath);
-            formData.append('files', fileStream, relativePath);
-          }
-        }
-      }
+    for await (const { stream, name } of this.fileGenerator(args.directory)) {
+      formData.append('files', stream, name);
     }
 
-    // Start the recursive process from the root directory
-    await processDirectory(args.directory);
-
     formData.append('context_name', args.contextName);
-    formData.append('maxChunkSize', args.maxChunkSize);
+    formData.append('max_chunk_size', args.maxChunkSize);
 
     if (args.metadataJson) {
       formData.append('metadata_json', JSON.stringify(args.metadataJson));

@@ -1,10 +1,25 @@
+import {OneContextClient} from "./../dist/index.js"
 import {describe, expect, test, beforeAll, afterAll} from '@jest/globals';
-import ocClient from './../construct.js';
-import fs from 'fs/promises';
+import * as dotenv from 'dotenv';
+import {fileURLToPath} from 'url';
 import path from 'path';
-import {fileURLToPath} from "url";
-
+import fs from 'fs/promises';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envPath = path.resolve(__dirname, '..', '.env');
+dotenv.config({path: envPath});
+
+const API_KEY = process.env.API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Check if required environment variables are set
+if (!API_KEY || !OPENAI_API_KEY) {
+  console.error('Missing required environment variables. Please check your .env file.');
+  process.exit(1);
+}
+
+const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY);
+
+
 
 async function consumeResponse(response) {
   await response.text();

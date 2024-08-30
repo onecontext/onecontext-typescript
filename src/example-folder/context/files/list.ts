@@ -1,9 +1,9 @@
 import ocClient from '../../construct.js';
 
 try {
-  const result = await ocClient.contextList()
+  const result = await ocClient.listFiles({contextName: "ross"})
   if (result.ok) {
-    await result.json().then((data) => console.log('Context list:', data));
+    await result.json().then((data: any) => console.log(`Files for context:`, data));
   } else {
     console.error('Error fetching context list');
   }
