@@ -8,7 +8,7 @@
     "declaration": true,
     "allowJs": true
   },
-  "dependencies": {
+  "dependencies": { 
     "dotenv": "^16.3.1",
     "form-data": "^4.0.0",
     "node-fetch": "^3.3.2",
@@ -17,7 +17,7 @@
     "zod": "^3.23.4"
   },
   "name": "@onecontext/ts-sdk-v2",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "OneContext is a platform that enables software engineers to compose and deploy custom RAG pipelines on cloud infrastructure",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

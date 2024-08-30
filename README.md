@@ -30,7 +30,7 @@ If you've misplaced your API key, you can rotate your existing one [here](https:
 
 #### Pop your API key in an .env file in the root of the repo (i.e. in the same directory as the package.json)
 
-```ts
+```zsh
 touch .env
 ```
 
@@ -42,306 +42,208 @@ API_KEY=your_api_key_here
 
 ## Play around
 
-In the `quickstart` folder, you'll find a file called `quickstart.ts`. This file is full of examples of things you can
-do with the OneContext SDK.
+### Initialise the OneContext client 
 
-### `quickstart/quickstart.ts` has a lot of examples to get you started
+```zsh
+touch construct.ts
+```
 
-Let's go through what's going on in this file below.
-
-#### First load your API key as an env variable
+Add the below into that file
 
 ```ts
-// Create a .env file and add your API_KEY 
-import * as dotenv from "dotenv";
+import {OneContextClient} from "@onecontext/ts-sdk-v2"
+import * as dotenv from 'dotenv';
+import {fileURLToPath} from 'url';
 import path from 'path';
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({path: __dirname + '/../.env'});
 
-// Load the API key from the environment and make sure it's present
-const API_KEY: string = process.env.API_KEY!;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envPath = path.resolve(__dirname, '.env');
+dotenv.config({path: envPath});
+
+const API_KEY = process.env.API_KEY;
+const BASE_URL = process.env.BASE_URL;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Check if required environment variables are set
+if (!API_KEY || !BASE_URL) {
+  console.error('Missing required environment variables. Please check your .env file.');
+  process.exit(1);
+}
+
+const ocClient = new OneContextClient(BASE_URL, API_KEY, OPENAI_API_KEY);
+
+export default ocClient;
+
 ```
 
-#### Define some global variables which we'll use later
+
+### Create a Context 
+
+A `Context` is where you store your data. You can think of a `Context` as a "File Store", a "Knowledge Base", a "Second Brain", etc..
 
 ```ts
-const knowledgeBaseName: string = "demoKnowledgeBase" 
-const vectorIndexName: string = "demoVectorIndex"
-const indexPipelineName: string = "demoIndexPipeline"
-const simpleRetrieverPipelineName: string = "demoSimpleRetrieverPipeline"
-const involvedRetrieverPipelineName: string = "demoInvolvedRetrieverPipeline"
+import ocClient from './construct.js';
+
+try {
+  const result = await ocClient.createContext({contextName: "contextExample"})
+  if (result.ok) {
+    await result.json().then((data) => console.log('Context created:', data));
+  } else {
+    console.error('Error creating context.');
+  }
+} catch (error) {
+  console.error('Error creating context.', error);
+}
 ```
 
-#### Create a `Knowledge Base`
+### Throw a load of files at it 
 
-A `Knowledge Base` is used to store your data. You can think of a `Knowledge Base` as a file store.
+Now you can enrich your context with knowledge. You can make your context an expert in anything, just add files.
+
+If you're on the free plan, you can have just one context, with up to 10 files (of less than 50 pages each). If you're
+on the pro plan, you can have up to 5,000 contexts, each with up to 5,000 files.
+
+#### You can add individual files
+
+Just add file paths to the array. It's always better to upload multiple files in this way, rather than making multiple
+requests with just one filepath in the array. We can process the jobs much faster (in a batch), and you're far less
+likely to hit our rate limits.
 
 ```ts
-const knowledgeBaseCreateArgs: OneContext.KnowledgeBaseCreateType = OneContext.KnowledgeBaseCreateSchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName
-})
-
-OneContext.createKnowledgeBase(knowledgeBaseCreateArgs).then((res) => {console.log(res)})
-```
-
-#### Create a `Vector Index`
-
-You can think of a `Vector Index` as a table in a vector database.
-
-```ts
-const vectorIndexCreateArgs: OneContext.VectorIndexCreateType = OneContext.VectorIndexCreateSchema.parse({
-  API_KEY: API_KEY,
-  vectorIndexName: vectorIndexName,
-  modelName: "BAAI/bge-base-en-v1.5"
-})
-
-OneContext.createVectorIndex(vectorIndexCreateArgs).then((res) => {console.log(res)})
-```
-
-#### Create an `Index Pipeline`
-
-An `Index Pipeline` is a `Pipeline` that connects a `Knowledge Base` (above) to a `Vector Index` (above). When you add
-data to
-a `Knowledge Base`, it automatically gets processed by any `Pipelines` that are connected to the `Knowledge Base`, and
-the resulting vectors get saved to the connected `Vector Indices`.
-
-A `Pipeline` is an ordered collection of `Steps`, defined entirely in a YAML file. You can see examples of Pipeline YAML
-files in the `example_yamls` folder in this repo. A `Step` is an atomic unit of work in a `Pipeline`. Examples of
-`Steps` include "Chunker", "LexRank", "Retriever", etc.
-
-When data is "processed" by a `Pipeline`, it means that the data is passed through each `Step` in the `Pipeline` in
-order. Each `Step` takes the output of the previous `Step` as input, and produces some output. The final output of the
-`Pipeline` is the output of the last `Step`.
-
-For a full treatment of what exactly is a `Step`, `Pipeline`, `Knowledge Base`, `Vector Index`, etc, please see
-the [OneContext docs](https://docs.onecontext.ai/).
-
-```ts
-const indexPipelineCreateArgs: OneContext.PipelineCreateType = OneContext.PipelineCreateSchema.parse({
-  API_KEY: API_KEY,
-  pipelineName: indexPipelineName,
-  pipelineYaml: "./quickstart/example_yamls/index.yaml",
-})
-
-OneContext.createPipeline(indexPipelineCreateArgs).then((res) => {console.log(res)})
-
-
-```
-
-#### Create a (simple) `Retriever Pipeline`
-
-We now create a `Retriever Pipeline`. A `Retriever Pipeline` is a `Pipeline` that is used to retrieve data from a
-`Vector Index` and output it to your application.
-
-(so, whereas an `Index Pipeline` processes data and saves it to a `Vector Index`, a `Retriever Pipeline` retrieves data
-from a `Vector Index` and outputs it to your application)
-
-Here we first create a "simple" `Retriever Pipeline`. This pipeline is simple because it only has one `Step` in it,
-which is a `Retriever` `Step`. This retriever step just does a cosine similarity in the Vector Index and retrieves the
-most similar vectors to the input query.
-You can check out the specification of this `Retriever Pipeline` in the `example_yamls` folder in this repo, in the
-file "retrieve.yaml".
-
-```ts
-const simpleRetrieverPipeline: OneContext.PipelineCreateType = OneContext.PipelineCreateSchema.parse({
-  API_KEY: API_KEY,
-  pipelineName: simpleRetrieverPipelineName,
-  pipelineYaml: "./quickstart/example_yamls/retrieve.yaml",
-})
-
-OneContext.createPipeline(simpleRetrieverPipeline).then((res) => {console.log(res)})
-
-```
-
-#### Create a more involved `Retriever Pipeline`
-
-Let's also create a more complicated retriever pipeline. We can easily compare and contrast the results later on.
-
-The specification for this pipeline is in the file "retrieve_filter_and_rerank.yaml" in the `example_yamls` folder in
-this repo.
-
-This pipeline has three steps in it: a `Retriever` step, a `FilterInMemory` step, and a `Reranker` step. The `Retriever`
-step
-retrieves the most similar vectors to the input query, the `FilterInMemory` step only passes through vectors which score
-more than 0.5 on the `LexRank Percentile Score` (this was added to the vectors by the `LexRank` step in the
-`Indexing Pipeline`). Finally,
-the `Reranker` step passes the resultant vectors through a `ReRanker` model, which is a special machine learning model
-which re-ranks vectors for relevancy to a query.
-
-For more on `ReRanker` models, see the [OneContext docs](https://docs.onecontext.ai/).
-
-```ts
-const involvedRetrieverPipelineCreateArgs: OneContext.PipelineCreateType = OneContext.PipelineCreateSchema.parse({
-  API_KEY: API_KEY,
-  pipelineName: involvedRetrieverPipelineName,
-  pipelineYaml: "./quickstart/example_yamls/retrieve_filter_and_rerank.yaml",
-})
-
-OneContext.createPipeline(involvedRetrieverPipelineCreateArgs).then((res) => {console.log(res)})
-
-```
-
-#### Upload a directory of files related to Charlie Munger to the `Knowledge Base`
-
-We'll include a metadataJson field to tag them with the tag "charlie_munger". This can be useful later as we can filter
-on metadata when we want to retrieve these files.
-
-```ts
-const uploadDirectoryArgsLongForm: OneContext.UploadDirectoryType = OneContext.UploadDirectorySchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName,
-  directory: "./quickstart/demo_data/long_form/",
-  metadataJson: {"tag": "longForm"}
-})
-
-OneContext.uploadDirectory(uploadDirectoryArgsLongForm).then((res) => {console.log(res)})
-
-```
-
-#### Upload another directory of files related to Machine Learning to the same `Knowledge Base`
-
-We could also of course have created a different `Knowledge Base` for this data if we wanted to. For ease, let's just
-upload to the same `Knowledge Base` and we'll tag these files with a different tag.
-
-```ts
-const uploadDirectoryArgsML: OneContext.UploadDirectoryType = OneContext.UploadDirectorySchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName,
-  directory: "./quickstart/demo_data/machine_learning/",
-  metadataJson: {"tag": "machine_learning"}
-})
-
-OneContext.uploadDirectory(uploadDirectoryArgsML).then((res) => {console.log(res)})
-
-
-```
-
-#### You can also just upload one file at a time
-
-```ts
-const uploadFileArgs: OneContext.UploadFilesType = OneContext.UploadFilesSchema.parse({
-API_KEY: API_KEY,
-knowledgeBaseName: knowledgeBaseName,
-file: "./quickstart/demo_data/instruct_gpt.pdf",
-metadataJson: {"tag": "longForm"}
-})
-
-OneContext.uploadFiles(uploadFileArgs).then((res) => {console.log(res)})
-```
-
-#### List all the currently running `Pipelines`
-
-Here we are only listing the latest 10 pipelines initiated in the last week.
-
-```ts
-const runResultsArgs: OneContext.RunResultsType = OneContext.RunResultsSchema.parse({
-  API_KEY: API_KEY,
-  limit: 10,
-  sort: "date_created",
-  dateCreatedGte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-})
-
-OneContext.getRunResults(runResultsArgs).then((res) => {console.log(util.inspect(res,{showHidden: false, colors: true}))})
-
-
-```
-
-#### We can also view the files which are in a particular `Knowledge Base`
-
-```ts
-const listFilesArgs: OneContext.ListFilesType = OneContext.ListFilesSchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName,
-})
-
-OneContext.listFiles(listFilesArgs).then((res) => {console.log(res)})
-```
-
-#### See any files you don't want in the `Knowledge Base`? Delete them. You can pass a list of strings as file names.
-
-```ts 
-const deleteFileArgs: OneContext.DeleteFilesType = OneContext.DeleteFilesSchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName,
-  fileNames: ["instruct_gpt.pdf"]
-})
-
-OneContext.deleteFiles(deleteFileArgs).then((res) => {console.log(res)})
-```
-
-#### Run the "simple" retriever pipeline to query the vector index (full of embeddings of the above files) for the most relevant chunks to a given query.
-
-```ts
-const simpleRetrieverPipelineRunArgs: OneContext.RunType = OneContext.RunSchema.parse({
-  API_KEY: API_KEY,
-  pipelineName: simpleRetrieverPipelineName,
-  overrideArgs: {"query_embedder": {"query": "what did Charlie Munger have to say about having an opinion on something he was not an expert in?"}, "retriever" : {"top_k" : 10}}
-})
-
-OneContext.runPipeline(simpleRetrieverPipelineRunArgs).then((res) => {console.log(util.inspect(res, {showHidden: true, colors: true}))})
-```
-
-#### Run the more "involved" retriever pipeline to first query the vector index, then filter for embeddings with a relevancy score of > 0.5, and finally rerank the results using a reranker model.
-
-This pipeline will take longer to run, but should give better results. We can compare and contrast these results between
-the two pipelines.
-
-For more on LexRank and how it works, read our [docs!](https://docs.onecontext.ai/)
-
-```ts 
-const involvedRetrieverPipelineRunArgs: OneContext.RunType = OneContext.RunSchema.parse({
-  API_KEY: API_KEY,
-  pipelineName: involvedRetrieverPipelineName,
-  overrideArgs: {"query_embedder": {"query": "what did Charlie Munger have to say about having an opinion on something he was not an expert in?"}, "retriever" : {"top_k" : 10}}
-})
-
-OneContext.runPipeline(involvedRetrieverPipelineRunArgs).then((res) => {console.log(util.inspect(res, {showHidden: true, colors: true}))})
-```
-
-#### When you're finished with the `Knowledge Base`, you can delete it. This will delete all the data in the
-`Knowledge Base`, along with any chunks, and embeddings connected to it.
-
-```ts 
-const knowledgeBaseDeleteArgs: OneContext.KnowledgeBaseDeleteType = OneContext.KnowledgeBaseDeleteSchema.parse({
-  API_KEY: API_KEY,
-  knowledgeBaseName: knowledgeBaseName
-})
-
-OneContext.deleteKnowledgeBase(knowledgeBaseDeleteArgs).then((res) => {console.log(res)})
-```
-
-#### You can also delete the
-`Vector Index`. It will already have no data in it (as the chunks and embeddings were cascade deleted after you deleted the
-`Knowledge Base` above), but it's good practice to delete it anyway.
-
-```ts 
-const vectorIndexDeleteArgs: OneContext.VectorIndexDeleteType = OneContext.VectorIndexDeleteSchema.parse({
-  API_KEY: API_KEY,
-  vectorIndexName: vectorIndexName
-})
-
-OneContext.deleteVectorIndex(vectorIndexDeleteArgs).then((res)=>{console.log(res)})
-```
-
-#### Finally, we can delete the
-`Pipelines` we created. Again, no real need to, but for the sake of ending the example, we'll delete them.
-
-```ts 
-const pipelineDeleteList: Array<OneContext.PipelineDeleteType> = [
-  OneContext.PipelineDeleteSchema.parse({API_KEY: API_KEY, pipelineName: "demoIndexPipeline"}),
-  OneContext.PipelineDeleteSchema.parse({API_KEY: API_KEY, pipelineName: "demoSimpleRetrieverPipeline"}),
-  OneContext.PipelineDeleteSchema.parse({API_KEY: API_KEY, pipelineName: "demoInvolvedRetrieverPipeline"}),
-]
-
-pipelineDeleteList.forEach((pipe) => {
-  OneContext.deletePipeline(pipe).then((res) => {
-    if (res.ok)
-    {console.log(`Deleted pipeline ${pipe.pipelineName} successfully`)}
+import ocClient from './construct.js';
+
+try {
+  ocClient.uploadFiles({
+    files: [
+      {path: "/Users/demoUser/exampleDirectory/attention_is_all_you_need.pdf"},
+      {path: "/Users/demoUser/exampleDirectory/AN-other-file.pdf"},
+    ],
+    contextName: "contextExample",
+    stream: false,
+    maxChunkSize: 400
+  }).then((res: any) => {
+    if (res.ok) {
+      res.json().then((data: any) => console.log('File uploaded:', data));
+    } else {
+      console.error('Error uploading files.');
+    }
   })
-})
+
+} catch (error) {
+  console.error('Error uploading files:', error);
+}
 ```
-  
+
+#### You can also add full directories of files
+
+```ts
+import ocClient from './construct.js';
+
+try {
+  ocClient.uploadDirectory({
+    directory: "/Users/exampleUser/exampleDirectory/",
+    contextName: "contextExample",
+  }).then((res: any) => {
+    if (res.ok) {
+      res.json().then((data: any) => console.log('Directory uploaded:', data));
+    } else {
+      console.error('Error uploading directory.');
+    }
+  })
+} catch (error) {
+  console.error('Error uploading directory:', error);
+}
+```
+
+
+#### List the files in a particular context 
+
+```ts
+import ocClient from './construct.js';
+
+try {
+  const result = await ocClient.listFiles({contextName: "contextName"})
+  if (result.ok) {
+    await result.json().then((data) => console.log(`Files for context:`, data));
+  } else {
+    console.error('Error fetching files list');
+  }
+} catch (error) {
+  console.error('Error fetching files list:', error);
+}
+```
+
+#### List the contexts you have 
+
+```ts
+import ocClient from './construct.js';
+
+try {
+  const result = await ocClient.contextList()
+  if (result.ok) {
+    await result.json().then((data) => console.log('Context list:', data));
+  } else {
+    console.error('Error fetching context list');
+  }
+} catch (error) {
+  console.error('Error fetching context list:', error);
+}
+```
+
+#### Delete any contexts you no longer wish to have
+
+```ts
+import ocClient from './construct.js';
+
+try {
+  const result = await ocClient.deleteContext({contextName: 'contextExample'})
+  if (result.ok) {
+    await result.json().then((data) => console.log('Deleted context:', data));
+  } else {
+    console.error('Error deleting context.');
+  }
+} catch (error) {
+  console.error('Error deleting context:', error);
+}
+```
+
+
+#### Search through your context
+
+Use this method to quickly search through your entire context (which can be thousands of files / hundreds of thousands
+of pages).
+
+More details on the arguments for this method:
+- query: the query that will be embedded and used for the similarity search.
+- contextName: the context you wish to execute the search over.
+- topK: the number of "chunks" of context that will be retrieved.
+- semanticWeight: how much to weight the relevance of the "semantic" similarity of the word. e.g. "Why, sometimes I've believed as many as six impossible things before breakfast." would be similar to "The man would routinely assume the veracity of ludicrous ideas in the morning", even though the words don't really have a lot in common.
+- fullTextWeight: how much to weight the relevance of the similarity of the actual words in the context. e.g. "The King is at the palace, with the Queen", would be quite similar to "Knight takes Queen on e4", even though semantically these sentences have quite different meanings.
+- rrfK: quite a technical parameter which determines how we merge the scores for semantic, and fullText weights. For more see [here](https://learn.microsoft.com/en-us/azure/search/hybrid-search-ranking)
+- includeEmbedding: a Boolean value to be set to True or False depending on whether you want to do something with the embeddings for each chunk. If you want to do clustering or visualise the results in multidimensional space, choose True. If you just want fast context for your language model prompts, choose False.
+
+```ts
+import ocClient from '../../construct.js';
+
+try {
+  const result = await ocClient.contextSearch(
+    {
+      "query": "An example query you can use to search through all the data in your context",
+      "contextName": "contextExample",
+      "topK": 25,
+      "semanticWeight": 0.5,
+      "fullTextWeight": 0.5,
+      "rrfK": 60,
+      "includeEmbedding": false
+    }
+  )
+  if (result.ok) {
+    await result.json().then((data) => console.log('Search results:', data));
+  } else {
+    console.error('Error searching context.');
+  }
+} catch (error) {
+  console.error('Error searching context.', error);
+}
+```
 
