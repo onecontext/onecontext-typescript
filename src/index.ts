@@ -8,21 +8,21 @@ import {Readable} from "stream";
 export * from './utils.js';
 
 export class OneContextClient {
-  private baseUrl: string;
   private apiKey: string;
+  private baseUrl: string;
   private openAiKey?: string;
 
   /**
    * Creates an instance of OneContextClient.
    * @private
-   * @param baseUrl - The base URL for the OneContext API.
    * @param apiKey - The API key for authentication.
    * @param openAiKey - Optional OpenAI API key.
+   * @param baseUrl - The base URL for the OneContext API.
    */
-  constructor(baseUrl: string, apiKey: string, openAiKey?: string) {
-    this.baseUrl = baseUrl;
+  constructor(apiKey: string, openAiKey?: string, baseUrl?: string) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
+    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
   }
 
   /**
