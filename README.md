@@ -5,7 +5,6 @@ and Node CLI tools, to OneContext's platform.
 
 ## What is OneContext?
 
-
 OneContext is a platform that enables software engineers to compose and deploy custom RAG pipelines on SOTA
 infrastructure, without all the faff.
 You just create a context, and add files to it. You can then query your context using vector search, hybrid search, the
