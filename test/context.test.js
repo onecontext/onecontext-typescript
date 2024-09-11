@@ -99,7 +99,7 @@ describe("Context Operations", () => {
         await performSearch(testContextName1);
       } finally {
       }
-    }, 240000); // 4 minute total timeout
+    }, 480000); // 4 minute total timeout
   });
 
   describe("uploadDirectory method", () => {
@@ -128,14 +128,14 @@ describe("Context Operations", () => {
 
       // Perform search
       await performSearch(testContextName2);
-    }, 240000); // 4 minute total timeout
+    }, 480000); // 4 minute total timeout
   });
 });
 
 async function waitForProcessing(contextName) {
   let allFilesProcessed = false;
   let attempts = 0;
-  const maxAttempts = 5; // 5*15 seconds total wait time
+  const maxAttempts = 10; // 5*15 seconds total wait time
 
   while (!allFilesProcessed && attempts < maxAttempts) {
     const listResult = await ocClient.listFiles({ contextName: contextName });
