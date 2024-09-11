@@ -1,18 +1,23 @@
-import ocClient from '../../../construct.js';
+import ocClient from "../../../construct.js";
 
 try {
   const res = await ocClient.uploadFiles({
-    files: [{path: "/Users/rossmurphy/embedding_example/embedpdf/attention_is_all_you_need.pdf"}],
-    contextName: "example",
+    files: [{ path: "/Users/serge/Downloads/Youssef_Bonnaire_CV.pdf" }],
+    contextName: "cs_papers",
     stream: false,
-    maxChunkSize: 400
+    maxChunkSize: 400,
   });
 
   if (res.ok) {
-    await res.json().then((data: any) => console.log('File(s) successfully uploaded:', data));
+    await res
+      .json()
+      .then((data: any) => console.log("File(s) successfully uploaded:", data));
   } else {
-    console.error('Error uploading files.');
+    await res
+      .json()
+      .then((data: any) => console.log("error", JSON.stringify(data, null, 2)));
   }
 } catch (error) {
-  console.error('Error fetching context list:', error);
+  console.error("Error uploading files", error);
 }
+

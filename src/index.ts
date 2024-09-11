@@ -1,12 +1,12 @@
-import fetch, {RequestInit, Response} from 'node-fetch';
-import FormData from 'form-data';
-import {promises as fs} from 'fs';
-import { createReadStream } from 'fs';
+import fetch, { RequestInit, Response } from "node-fetch";
+import FormData from "form-data";
+import { promises as fs } from "fs";
+import { createReadStream } from "fs";
 import * as path from "path";
 import * as inputTypes from "./types/inputs.js";
-import {Readable} from "stream";
+import { Readable } from "stream";
 
-export * from './utils.js';
+export * from "./utils.js";
 
 export class OneContextClient {
   private apiKey: string;
@@ -23,7 +23,7 @@ export class OneContextClient {
   constructor(apiKey: string, openAiKey?: string, baseUrl?: string) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
-    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
+    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v3/";
   }
 
   /**
@@ -33,23 +33,26 @@ export class OneContextClient {
    * @param options - Additional options for the request.
    * @returns The response from the API.
    */
-  private async request(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  private async request(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<Response> {
     const url = new URL(endpoint, this.baseUrl).toString();
+
     // Create a new headers object
-    const headers = new Headers({...options.headers});
+    const headers = new Headers({ ...options.headers });
 
     // Add the API key
     headers.set("API-KEY", this.apiKey);
 
     // Add the OpenAI API key if it exists
     if (this.openAiKey) {
-
       // Note, you do not have to pass in the headers each time if you do not want to!
       // Alternatively, you can store your key with us (in an encrypted format) on our backend.
       // Simply visit https://app.onecontext.ai/settings/account and add your key there.
 
       // This will add a little overhead to each of your requests (as we need to fetch, and decrypt the key on each
-      // request, but, can be preferable in certain scenarios). 
+      // request, but, can be preferable in certain scenarios).
       headers.set("OPENAI-API-KEY", this.openAiKey);
     }
 
@@ -58,7 +61,6 @@ export class OneContextClient {
       ...options,
       headers,
     };
-
 
     return await fetch(url, finalOptions);
   }
@@ -70,7 +72,7 @@ export class OneContextClient {
    * @returns True if the file is a ContentFile, false otherwise.
    */
   private isContentFile(file: any): file is inputTypes.ContentFile {
-    return 'readable' in file && 'name' in file;
+    return "readable" in file && "name" in file;
   }
 
   /**
@@ -80,7 +82,7 @@ export class OneContextClient {
    * @returns True if the file is a PathFile, false otherwise.
    */
   private isPathFile(file: any): file is inputTypes.PathFile {
-    return 'readable' in file && 'path' in file;
+    return "readable" in file && "path" in file;
   }
 
   /**
@@ -101,8 +103,8 @@ export class OneContextClient {
    * }
    */
   async createContext(args: inputTypes.ContextCreateType): Promise<Response> {
-    return this.request('context/create', {
-      method: 'POST',
+    return this.request("context", {
+      method: "POST",
       body: JSON.stringify(args),
     });
   }
@@ -130,8 +132,9 @@ export class OneContextClient {
    *
    */
   async deleteContext(args: inputTypes.ContextDeleteType): Promise<Response> {
-    return this.request(`context/delete/${args.contextName}`, {
-      method: 'DELETE',
+    return this.request(`context`, {
+      method: "DELETE",
+      body: JSON.stringify(args),
     });
   }
 
@@ -153,8 +156,8 @@ export class OneContextClient {
    *
    */
   async contextList(): Promise<Response> {
-    return this.request('context/list', {
-      method: 'GET',
+    return this.request("context", {
+      method: "GET",
     });
   }
 
@@ -186,11 +189,11 @@ export class OneContextClient {
    * }
    */
   async contextSearch(args: inputTypes.ContextSearchType): Promise<Response> {
-    return this.request('embeddings/get', {
-      method: 'POST',
+    return this.request("context/query", {
+      method: "POST",
       body: JSON.stringify(args),
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
     });
   }
@@ -205,8 +208,8 @@ export class OneContextClient {
       file_names: args.fileNames,
       knowledgebase_name: args.contextName,
     };
-    return this.request('files', {
-      method: 'DELETE',
+    return this.request("files", {
+      method: "DELETE",
       body: JSON.stringify(renamedArgs),
     });
   }
@@ -217,14 +220,16 @@ export class OneContextClient {
    * @returns The response from the API containing the list of files.
    */
   async listFiles(args: inputTypes.ListFilesType): Promise<Response> {
-    return this.request('context/files/list', {
-      method: 'POST',
+    return this.request("context/file", {
+      method: "POST",
       body: JSON.stringify(args),
     });
   }
-  
-  private async * fileGenerator(directory: string) {
-    async function* walkDirectory(dir: string): AsyncGenerator<{ path: string, name: string }> {
+
+  private async *fileGenerator(directory: string) {
+    async function* walkDirectory(
+      dir: string,
+    ): AsyncGenerator<{ path: string; name: string }> {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
@@ -244,7 +249,6 @@ export class OneContextClient {
       yield { stream, name: file.name };
     }
   }
-
 
   /**
    * Uploads a directory of files to a context.
@@ -269,22 +273,24 @@ export class OneContextClient {
    *  console.error('Error uploading directory:', error);
    *}
    */
-  async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
+  async uploadDirectory(
+    args: inputTypes.UploadDirectoryType,
+  ): Promise<Response> {
     const formData = new FormData();
 
     for await (const { stream, name } of this.fileGenerator(args.directory)) {
-      formData.append('files', stream, name);
+      formData.append("files", stream, name);
     }
 
-    formData.append('context_name', args.contextName);
-    formData.append('max_chunk_size', args.maxChunkSize);
+    formData.append("contextName", args.contextName);
+    formData.append("maxChunkSize", args.maxChunkSize);
 
     if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+      formData.append("metadataJson", JSON.stringify(args.metadataJson));
     }
 
-    return this.request('jobs/files/add', {
-      method: 'POST',
+    return this.request("context/file/upload", {
+      method: "POST",
       body: formData,
       headers: formData.getHeaders(),
     });
@@ -319,19 +325,23 @@ export class OneContextClient {
 
     for (const file of args.files) {
       if (args.stream) {
-        if (!file || !('readable' in file) || !(file.readable instanceof Readable)) {
-          console.error('Invalid file object for stream mode:', file);
-          throw new Error('Invalid file object for stream mode');
+        if (
+          !file ||
+          !("readable" in file) ||
+          !(file.readable instanceof Readable)
+        ) {
+          console.error("Invalid file object for stream mode:", file);
+          throw new Error("Invalid file object for stream mode");
         }
         const f = file as inputTypes.ContentFile;
-        formData.append('files', f.readable, {
-          filename: f.name || 'unnamed_file',
-          contentType: 'text/plain',
+        formData.append("files", f.readable, {
+          filename: f.name || "unnamed_file",
+          contentType: "text/plain",
         });
       } else {
-        if (!file || !('path' in file) || typeof file.path !== 'string') {
-          console.error('Invalid file object for non-stream mode:', file);
-          throw new Error('Invalid file object for non-stream mode');
+        if (!file || !("path" in file) || typeof file.path !== "string") {
+          console.error("Invalid file object for non-stream mode:", file);
+          throw new Error("Invalid file object for non-stream mode");
         }
         const f = file as inputTypes.PathFile;
         try {
@@ -339,23 +349,25 @@ export class OneContextClient {
           await fs.access(f.path);
           const filename = path.basename(f.path);
           const fileStream = await fs.readFile(f.path);
-          formData.append('files', fileStream, filename);
+          formData.append("files", fileStream, filename);
         } catch (error) {
           console.error(`File does not exist or is not accessible: ${f.path}`);
-          throw new Error(`File does not exist or is not accessible: ${f.path}`);
+          throw new Error(
+            `File does not exist or is not accessible: ${f.path}`,
+          );
         }
       }
     }
 
-    formData.append('context_name', args.contextName);
-    formData.append('maxChunkSize', args.maxChunkSize);
+    formData.append("contextName", args.contextName);
+    formData.append("maxChunkSize", args.maxChunkSize);
 
     if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+      formData.append("metadataJson", JSON.stringify(args.metadataJson));
     }
 
-    return this.request('jobs/files/add', {
-      method: 'POST',
+    return this.request("context/file/upload", {
+      method: "POST",
       body: formData,
       headers: formData.getHeaders(),
     });
@@ -388,11 +400,13 @@ export class OneContextClient {
    *   console.error('Error setting key:', error);
    * }
    */
-  async setOpenAIApiKey(args: inputTypes.SetOpenAIApiKeyType): Promise<Response> {
-    return this.request('user/updateUserMeta', {
-      method: 'POST',
+  async setOpenAIApiKey(
+    args: inputTypes.SetOpenAIApiKeyType,
+  ): Promise<Response> {
+    return this.request("user/updateUserMeta", {
+      method: "POST",
       body: JSON.stringify(args),
     });
   }
-
 }
+
