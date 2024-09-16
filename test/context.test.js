@@ -10,6 +10,7 @@ dotenv.config({path: envPath});
 
 const API_KEY = process.env.API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const BASE_URL = process.env.BASE_URL;
 
 // Check if required environment variables are set
 if (!API_KEY || !OPENAI_API_KEY) {
@@ -17,8 +18,7 @@ if (!API_KEY || !OPENAI_API_KEY) {
   process.exit(1);
 }
 
-const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY);
-
+const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY, BASE_URL);
 
 
 async function consumeResponse(response) {

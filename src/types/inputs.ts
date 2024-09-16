@@ -96,11 +96,23 @@ export const ContextDeleteSchema = z.object({
 export const ListContext = z.object({});
 
 /**
+ * Schema for filtering a context, and defining the parameters for said filter
+ */
+export const ContextGet = z.object({
+  contextName: z.string(),
+  metadataJson: z.object({}).default({}).optional(),
+  topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
+  includeEmbedding: z.boolean().default(false).optional()
+})
+
+/**
  * Schema for searching through a context, and defining the parameters for said search
  */
 export const ContextSearch = z.object({
-  query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the getChunks method!"}),
+  query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the ContextGet method!"}),
   contextName: z.string(),
+  // TODO - add stricter type for this (it's on the backend, move it over here')
+  metadataJson: z.object({}).default({}).optional(),
   topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
   semanticWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Semantic weight must be between 0 and 1"}).default(0.5).optional(),
   fullTextWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Full text weight must be between 0 and 1"}).default(0.5).optional(),
@@ -139,6 +151,7 @@ export type ContentFile = z.infer<typeof ContentFileSchema>;
 export type PathFile = z.infer<typeof PathFileSchema>;
 export type ContextCreateType = z.infer<typeof ContextCreateSchema>
 export type ContextDeleteType = z.infer<typeof ContextDeleteSchema>
+export type ContextGetType = z.infer<typeof ContextGet>
 export type ContextSearchType = z.infer<typeof ContextSearch>
 export type ListFilesType = z.infer<typeof ListFilesSchema>
 export type DeleteFilesType = z.infer<typeof DeleteFilesSchema>

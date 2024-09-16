@@ -153,7 +153,7 @@ export class OneContextClient {
    *
    */
   async contextList(): Promise<Response> {
-    return this.request('context/list', {
+    return this.request('context', {
       method: 'GET',
     });
   }
@@ -186,7 +186,41 @@ export class OneContextClient {
    * }
    */
   async contextSearch(args: inputTypes.ContextSearchType): Promise<Response> {
-    return this.request('embeddings/get', {
+    return this.request('context/get/search', {
+      method: 'POST',
+      body: JSON.stringify(args),
+      headers: {
+        "Content-Type": "application/json"
+      },
+    });
+  }
+  
+  /**
+   * Filters within a context.
+   * @param args - The arguments for filtering chunks in a context.
+   * @returns The response from the API containing the filter results.
+   * @example
+   * try {
+   *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
+   *   const result = await ocClient.contextFilter(
+   *     {
+   *       "contextName": "contextName",
+   *       "topK": 20,
+   *       "metadataJson": {},
+   *       "includeEmbedding": false
+   *     }
+   *   )
+   *   if (result.ok) {
+   *     await result.json().then((data) => console.log('Filter results:', data));
+   *   } else {
+   *     console.error('Error searching context.');
+   *   }
+   * } catch (error) {
+   *   console.error('Error searching context.', error);
+   * }
+   */
+  async contextGet(args: inputTypes.ContextGetType): Promise<Response> {
+    return this.request('context/get', {
       method: 'POST',
       body: JSON.stringify(args),
       headers: {
@@ -205,7 +239,7 @@ export class OneContextClient {
       file_names: args.fileNames,
       knowledgebase_name: args.contextName,
     };
-    return this.request('files', {
+    return this.request('file', {
       method: 'DELETE',
       body: JSON.stringify(renamedArgs),
     });
@@ -217,7 +251,7 @@ export class OneContextClient {
    * @returns The response from the API containing the list of files.
    */
   async listFiles(args: inputTypes.ListFilesType): Promise<Response> {
-    return this.request('context/files/list', {
+    return this.request('context/file', {
       method: 'POST',
       body: JSON.stringify(args),
     });
