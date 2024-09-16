@@ -231,15 +231,15 @@ export class OneContextClient {
 
   /**
    * Deletes files from a context.
-   * @param args - The arguments for deleting files.
+   * @param args - The arguments for deleting a file.
    * @returns The response from the API.
    */
-  async deleteFiles(args: inputTypes.DeleteFilesType): Promise<Response> {
+  async deleteFile(args: inputTypes.DeleteFileType): Promise<Response> {
     const renamedArgs = {
-      file_names: args.fileNames,
-      knowledgebase_name: args.contextName,
+      fileId: args.fileId,
+      contextName: args.contextName,
     };
-    return this.request('file', {
+    return this.request('context/file', {
       method: 'DELETE',
       body: JSON.stringify(renamedArgs),
     });

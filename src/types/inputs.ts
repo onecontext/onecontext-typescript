@@ -20,9 +20,9 @@ export const SetOpenAIKeySchema = z.object({
 /**
  * Schema for deleting files from a context.
  */
-export const DeleteFilesSchema = z.object({
+export const DeleteFileSchema = z.object({
   contextName: z.string().refine((val: any) => val.trim() !== '', {message: "Context name cannot be empty"}),
-  fileNames: z.array(z.string()).refine((val: any) => val.length > 0, {message: "File names cannot be empty"}),
+  fileId: z.string().refine((val: any) => val.length > 0, {message: "File id cannot be empty"}),
 });
 
 /**
@@ -154,7 +154,7 @@ export type ContextDeleteType = z.infer<typeof ContextDeleteSchema>
 export type ContextGetType = z.infer<typeof ContextGet>
 export type ContextSearchType = z.infer<typeof ContextSearch>
 export type ListFilesType = z.infer<typeof ListFilesSchema>
-export type DeleteFilesType = z.infer<typeof DeleteFilesSchema>
+export type DeleteFileType = z.infer<typeof DeleteFileSchema>
 export type UploadFilesType = z.infer<typeof UploadFilesSchema>
 export type UploadDirectoryType = z.infer<typeof UploadDirectorySchema>
 export type SetOpenAIApiKeyType = z.infer<typeof SetOpenAIKeySchema>
