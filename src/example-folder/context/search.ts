@@ -7,8 +7,8 @@ try {
       "contextName": "ross",
       "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
       "topK": 5,
-      "semanticWeight": 0.5,
-      "fullTextWeight": 0.5,
+      "semanticWeight": 0.3,
+      "fullTextWeight": 0.7,
       "rrfK": 50,
       "includeEmbedding": false
     }

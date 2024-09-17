@@ -169,6 +169,7 @@ export class OneContextClient {
    *     {
    *       "query": "An example query you can use to search through all the data in your context",
    *       "contextName": "contextName",
+   *       "metadataFilters": {$and : [{age: {$eq: 100}}, {name: {$contains: "an_old_person"}}]},
    *       "topK": 20,
    *       "semanticWeight": 0.5,
    *       "fullTextWeight": 0.5,
@@ -197,16 +198,16 @@ export class OneContextClient {
   
   /**
    * Filters within a context.
-   * @param args - The arguments for filtering chunks in a context.
-   * @returns The response from the API containing the filter results.
+   * @param args - The arguments for returning chunks from a context.
+   * @returns The response from the API containing the chunks.
    * @example
    * try {
    *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
    *   const result = await ocClient.contextFilter(
    *     {
    *       "contextName": "contextName",
-   *       "topK": 20,
-   *       "metadataFilters": {},
+   *       "limit": 20,
+   *       "metadataFilters": {$and : [{age: {$eq: 100}}, {name: {$contains: "an_old_person"}}]},
    *       "includeEmbedding": false
    *     }
    *   )
