@@ -186,7 +186,7 @@ export class OneContextClient {
    * }
    */
   async contextSearch(args: inputTypes.ContextSearchType): Promise<Response> {
-    return this.request('context/get/search', {
+    return this.request('context/chunk/search', {
       method: 'POST',
       body: JSON.stringify(args),
       headers: {
@@ -206,7 +206,7 @@ export class OneContextClient {
    *     {
    *       "contextName": "contextName",
    *       "topK": 20,
-   *       "metadataJson": {},
+   *       "metadataFilters": {},
    *       "includeEmbedding": false
    *     }
    *   )
@@ -220,7 +220,7 @@ export class OneContextClient {
    * }
    */
   async contextGet(args: inputTypes.ContextGetType): Promise<Response> {
-    return this.request('context/get', {
+    return this.request('context/chunk', {
       method: 'POST',
       body: JSON.stringify(args),
       headers: {
@@ -256,6 +256,20 @@ export class OneContextClient {
       body: JSON.stringify(args),
     });
   }
+
+
+  /**
+   * Get a download URL for a particular file id.
+   * @param args - The file id.
+   * @returns A download url.
+   */
+  async getDownloadUrl(args: inputTypes.DownloadUrlType): Promise<Response> {
+    return this.request('context/file/download', {
+      method: 'POST',
+      body: JSON.stringify(args),
+    });
+  }
+  
   
   private async * fileGenerator(directory: string) {
     async function* walkDirectory(dir: string): AsyncGenerator<{ path: string, name: string }> {
@@ -313,8 +327,8 @@ export class OneContextClient {
     formData.append('context_name', args.contextName);
     formData.append('max_chunk_size', args.maxChunkSize);
 
-    if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+    if (args.metadataFilters) {
+      formData.append('metadata_json', JSON.stringify(args.metadataFilters));
     }
 
     return this.request('jobs/files/add', {

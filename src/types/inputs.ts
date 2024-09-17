@@ -33,7 +33,7 @@ export const ListFilesSchema = z.object({
   skip: z.number().default(0).optional(),
   limit: z.number().default(10).optional(),
   sort: z.string().default("date_created").optional(),
-  metadataJson: z.object({}).default({}).optional(),
+  metadataFilters: z.object({}).default({}).optional(),
 });
 
 /**
@@ -100,8 +100,8 @@ export const ListContext = z.object({});
  */
 export const ContextGet = z.object({
   contextName: z.string(),
-  metadataJson: z.object({}).default({}).optional(),
-  topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
+  metadataFilters: z.object({}).default({}).optional(),
+  limit: z.union([z.number().refine((val) => val > 0, {message: "Limit must be greater than 0"}), z.null()]),
   includeEmbedding: z.boolean().default(false).optional()
 })
 
@@ -112,7 +112,7 @@ export const ContextSearch = z.object({
   query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the ContextGet method!"}),
   contextName: z.string(),
   // TODO - add stricter type for this (it's on the backend, move it over here')
-  metadataJson: z.object({}).default({}).optional(),
+  metadataFilters: z.object({}).default({}).optional(),
   topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
   semanticWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Semantic weight must be between 0 and 1"}).default(0.5).optional(),
   fullTextWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Full text weight must be between 0 and 1"}).default(0.5).optional(),
@@ -137,12 +137,19 @@ export const UploadFilesSchema = z.object({
 });
 
 /**
+ * Schema for requesting a download url 
+ */
+export const DownloadUrlRequestSchema = z.object({
+  fileId: z.string(),
+});
+
+/**
  * Schema for uploading an entire directory of files to a context
  */
 export const UploadDirectorySchema = z.object({
   directory: z.string().refine((val) => val.endsWith("/"), {message: "Directory must end with /"}),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Knowledge Base name cannot be empty"}),
-  metadataJson: z.object({}).optional(),
+  metadataFilters: z.object({}).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
 });
 
@@ -158,3 +165,4 @@ export type DeleteFileType = z.infer<typeof DeleteFileSchema>
 export type UploadFilesType = z.infer<typeof UploadFilesSchema>
 export type UploadDirectoryType = z.infer<typeof UploadDirectorySchema>
 export type SetOpenAIApiKeyType = z.infer<typeof SetOpenAIKeySchema>
+export type DownloadUrlType = z.infer<typeof DownloadUrlRequestSchema>

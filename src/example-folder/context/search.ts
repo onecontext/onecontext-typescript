@@ -5,7 +5,7 @@ try {
     {
       "query": "is handled in a safe and secure manner. and has taken several steps to ensure a customer ",
       "contextName": "ross",
-      "metadataJson": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
+      "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
       "topK": 5,
       "semanticWeight": 0.5,
       "fullTextWeight": 0.5,

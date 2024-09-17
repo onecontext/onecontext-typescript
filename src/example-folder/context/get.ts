@@ -4,8 +4,8 @@ try {
   const result = await ocClient.contextGet(
     {
       "contextName": "ross",
-      "metadataJson": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
-      "topK": 5,
+      "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
+      "limit": 5,
       "includeEmbedding": false
     }
   )
