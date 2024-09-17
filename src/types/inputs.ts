@@ -21,7 +21,6 @@ export const SetOpenAIKeySchema = z.object({
  * Schema for deleting files from a context.
  */
 export const DeleteFileSchema = z.object({
-  contextName: z.string().refine((val: any) => val.trim() !== '', {message: "Context name cannot be empty"}),
   fileId: z.string().refine((val: any) => val.length > 0, {message: "File id cannot be empty"}),
 });
 

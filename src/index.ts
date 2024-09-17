@@ -230,14 +230,29 @@ export class OneContextClient {
   }
 
   /**
-   * Deletes files from a context.
+   * Deletes files.
    * @param args - The arguments for deleting a file.
    * @returns The response from the API.
+   * @example
+   * try {
+   *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
+   *   const result = await ocClient.deleteFile(
+   *     {
+   *       "fileId": "example_file_id",
+   *     }
+   *   )
+   *   if (result.ok) {
+   *     await result.json().then((data) => console.log('Successfully deleted:', data));
+   *   } else {
+   *     console.error('Error deleting file.');
+   *   }
+   * } catch (error) {
+   *   console.error('Error deleting file.', error);
+   * }
    */
   async deleteFile(args: inputTypes.DeleteFileType): Promise<Response> {
     const renamedArgs = {
       fileId: args.fileId,
-      contextName: args.contextName,
     };
     return this.request('context/file', {
       method: 'DELETE',
