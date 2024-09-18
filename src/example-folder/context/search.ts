@@ -3,10 +3,10 @@ import ocClient from '../construct.js';
 try {
   const result = await ocClient.contextSearch(
     {
-      "query": "is handled in a safe and secure manner. and has taken several steps to ensure a customer ",
+      "query": "send important updates",
       "contextName": "ross",
-      "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
-      "topK": 5,
+      // "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
+      "topK": 1,
       "semanticWeight": 0.3,
       "fullTextWeight": 0.7,
       "rrfK": 50,

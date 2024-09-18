@@ -12,11 +12,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const BASE_URL = process.env.BASE_URL;
 
 // Check if required environment variables are set
-if (!API_KEY || !OPENAI_API_KEY) {
+if (!API_KEY ) {
   console.error('Missing required environment variables. Please check your .env file.');
   process.exit(1);
 }
 
-const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY, BASE_URL);
+const ocClient = new OneContextClient({apiKey: API_KEY, baseUrl: BASE_URL});
 
 export default ocClient;

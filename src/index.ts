@@ -20,7 +20,7 @@ export class OneContextClient {
    * @param openAiKey - Optional OpenAI API key.
    * @param baseUrl - The base URL for the OneContext API.
    */
-  constructor(apiKey: string, openAiKey?: string, baseUrl?: string) {
+  constructor({apiKey, openAiKey, baseUrl}:{apiKey: string, openAiKey?: string, baseUrl?: string}) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
     this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
