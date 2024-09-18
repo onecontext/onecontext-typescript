@@ -23,7 +23,7 @@ export class OneContextClient {
   constructor({apiKey, openAiKey, baseUrl}:{apiKey: string, openAiKey?: string, baseUrl?: string}) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
-    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
+    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v3/";
   }
 
   /**
@@ -142,9 +142,9 @@ export class OneContextClient {
    * @example
    * try {
    *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
-   *   const result = await ocClient.listFiles({contextName: "contextName"})
+   *   const result = await ocClient.contextList()
    *   if (result.ok) {
-   *     await result.json().then((data) => console.log(`Contexts for you user:`, data));
+   *     await result.json().then((data) => console.log(`Contexts for your user:`, data));
    *   } else {
    *     console.error('Error fetching list of contexts');
    *   }
@@ -344,17 +344,17 @@ export class OneContextClient {
       formData.append('files', stream, name);
     }
 
-    formData.append('context_name', args.contextName);
-    formData.append('max_chunk_size', args.maxChunkSize);
+    formData.append('contextName', args.contextName);
+    formData.append('maxChunkSize', args.maxChunkSize);
 
     if (args.metadataJson) {
       const metadataArray = new Array(fileCount).fill(args.metadataJson);
       metadataArray.forEach(metadata => {
-        formData.append('metadata_json', JSON.stringify(metadata));
+        formData.append('metadataJson', JSON.stringify(metadata));
       });
     }
 
-    return this.request('jobs/files/add', {
+    return this.request('context/file/upload', {
       method: 'POST',
       body: formData,
       headers: formData.getHeaders(),
@@ -418,17 +418,17 @@ export class OneContextClient {
       }
     }
 
-    formData.append('context_name', args.contextName);
+    formData.append('contextName', args.contextName);
     formData.append('maxChunkSize', args.maxChunkSize);
 
     if (args.metadataJson) {
       const metadataArray = new Array(args.files.length).fill(args.metadataJson);
       metadataArray.forEach(metadata => {
-        formData.append('metadata_json', JSON.stringify(metadata));
+        formData.append('metadataJson', JSON.stringify(metadata));
       });
     }
 
-    return this.request('jobs/files/add', {
+    return this.request('context/file/upload', {
       method: 'POST',
       body: formData,
       headers: formData.getHeaders(),

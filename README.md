@@ -37,7 +37,7 @@ touch .env
 Add your API key to this .env file like so:
 
 ```dotenv
-API_KEY=your_api_key_here
+ONECONTEXT_API_KEY=your_api_key_here
 ```
 
 ## Play around
@@ -60,7 +60,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, '.env');
 dotenv.config({path: envPath});
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = process.env.ONECONTEXT_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Check if required environment variables are set
@@ -69,7 +69,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY);
+const ocClient = new OneContextClient({apiKey: ONECONTEXT_API_KEY, openAiKey: OPENAI_API_KEY, baseUrl: BASE_URL});
 
 export default ocClient;
 ```

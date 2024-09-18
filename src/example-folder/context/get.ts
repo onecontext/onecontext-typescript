@@ -5,7 +5,7 @@ try {
     {
       "contextName": "ross",
       // "metadataFilters": {$and : [{age: {$eq: 30}}, {name: {$contains: "ross"}}]},
-      "metadataFilters": {"file_tag": {"$eq": "hello"}},
+      // "metadataFilters": {"file_tag": {"$eq": "hello"}},
       "limit": 5,
       "includeEmbedding": false
     }

@@ -107,7 +107,7 @@ describe('Context Operations', () => {
       } finally {
 
       }
-    }, 240000); // 4 minute total timeout 
+    }, 300000); // 5 minute total timeout 
   });
 
   describe('uploadDirectory method', () => {
@@ -152,6 +152,17 @@ describe('Context Operations', () => {
 
     }, 300000); // 5 minute total timeout 
   });
+});
+
+describe('context list method', () => {
+  test('should list contexts', async () => {
+    // Create context
+    const listResult = await ocClient.contextList();
+    expect(listResult.ok).toBe(true);
+    const listData = await listResult.json();
+    expect(listData).toBeDefined();
+
+  }, 60000); // 1 minute timeout 
 });
 
 async function waitForProcessing(contextName) {

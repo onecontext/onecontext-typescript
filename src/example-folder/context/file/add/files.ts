@@ -3,7 +3,8 @@ import ocClient from '../../../construct.js';
 try {
   const res = await ocClient.uploadFiles({
     files: [{path: "/Users/rossmurphy/embedding_example/embedpdf/attention_is_all_you_need.pdf"}],
-    contextName: "livedemo",
+    contextName: "ross",
+    metadataJson: {name: "ross"},
     stream: false,
     maxChunkSize: 400
   });
