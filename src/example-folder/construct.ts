@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, '..', '..', '.env');
 dotenv.config({path: envPath});
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = process.env.ONECONTEXT_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const BASE_URL = process.env.BASE_URL;
 

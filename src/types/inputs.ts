@@ -32,7 +32,7 @@ export const ListFilesSchema = z.object({
   skip: z.number().default(0).optional(),
   limit: z.number().default(10).optional(),
   sort: z.string().default("date_created").optional(),
-  metadataFilters: z.object({}).default({}).optional(),
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
 });
 
 /**
@@ -99,7 +99,7 @@ export const ListContext = z.object({});
  */
 export const ContextGet = z.object({
   contextName: z.string(),
-  metadataFilters: z.object({}).default({}).optional(),
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
   limit: z.union([z.number().refine((val) => val > 0, {message: "Limit must be greater than 0"}), z.null()]),
   includeEmbedding: z.boolean().default(false).optional()
 })
@@ -111,7 +111,7 @@ export const ContextSearch = z.object({
   query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the ContextGet method!"}),
   contextName: z.string(),
   // TODO - add stricter type for this (it's on the backend, move it over here')
-  metadataFilters: z.object({}).default({}).optional(),
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
   topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
   semanticWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Semantic weight must be between 0 and 1"}).default(0.5).optional(),
   fullTextWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Full text weight must be between 0 and 1"}).default(0.5).optional(),
@@ -131,7 +131,7 @@ export const UploadFilesSchema = z.object({
   files: z.array(FileSchema),
   stream: z.boolean().default(false).optional(),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Context name cannot be empty"}),
-  metadataJson: z.object({}).optional(),
+  metadataJson: z.record(z.string(),z.any()).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
 });
 
@@ -148,7 +148,7 @@ export const DownloadUrlRequestSchema = z.object({
 export const UploadDirectorySchema = z.object({
   directory: z.string().refine((val) => val.endsWith("/"), {message: "Directory must end with /"}),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Knowledge Base name cannot be empty"}),
-  metadataFilters: z.object({}).optional(),
+  metadataJson: z.record(z.string(),z.any()).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
 });
 

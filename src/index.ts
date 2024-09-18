@@ -101,7 +101,7 @@ export class OneContextClient {
    * }
    */
   async createContext(args: inputTypes.ContextCreateType): Promise<Response> {
-    return this.request('context/create', {
+    return this.request('context', {
       method: 'POST',
       body: JSON.stringify(args),
     });
@@ -130,8 +130,9 @@ export class OneContextClient {
    *
    */
   async deleteContext(args: inputTypes.ContextDeleteType): Promise<Response> {
-    return this.request(`context/delete/${args.contextName}`, {
+    return this.request(`context`, {
       method: 'DELETE',
+      body: JSON.stringify(args),
     });
   }
 
@@ -335,16 +336,22 @@ export class OneContextClient {
    */
   async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
     const formData = new FormData();
+    
+    let fileCount = 0
 
     for await (const { stream, name } of this.fileGenerator(args.directory)) {
+      fileCount++;
       formData.append('files', stream, name);
     }
 
     formData.append('context_name', args.contextName);
     formData.append('max_chunk_size', args.maxChunkSize);
 
-    if (args.metadataFilters) {
-      formData.append('metadata_json', JSON.stringify(args.metadataFilters));
+    if (args.metadataJson) {
+      const metadataArray = new Array(fileCount).fill(args.metadataJson);
+      metadataArray.forEach(metadata => {
+        formData.append('metadata_json', JSON.stringify(metadata));
+      });
     }
 
     return this.request('jobs/files/add', {
@@ -415,7 +422,10 @@ export class OneContextClient {
     formData.append('maxChunkSize', args.maxChunkSize);
 
     if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+      const metadataArray = new Array(args.files.length).fill(args.metadataJson);
+      metadataArray.forEach(metadata => {
+        formData.append('metadata_json', JSON.stringify(metadata));
+      });
     }
 
     return this.request('jobs/files/add', {
