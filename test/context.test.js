@@ -5,6 +5,7 @@ import {fileURLToPath} from 'url';
 import path from 'path';
 import fs from 'fs/promises';
 import {z} from "zod";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, '..', '.env');
 dotenv.config({path: envPath});
@@ -95,8 +96,16 @@ describe('Context Operations', () => {
         await waitForProcessing(testContextName1);
 
         // Perform search
-        await performSearch(testContextName1);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds before trying to search
+
+        await performSearchNoMeta(testContextName1);
+        await performSearchWithMeta(testContextName1);
+        await performSearchWithMetaExtendedWithRedundantOr(testContextName1);
+        await performGetChunksNoMeta(testContextName1);
+        await performGetChunksWithMeta(testContextName1);
+        await performGetChunksWithMetaNoResults(testContextName1);
       } finally {
+
       }
     }, 240000); // 4 minute total timeout 
   });
@@ -133,14 +142,14 @@ describe('Context Operations', () => {
 
       // Perform search
       await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds before trying to search
-      
+
       await performSearchNoMeta(testContextName2);
       await performSearchWithMeta(testContextName2);
       await performSearchWithMetaExtendedWithRedundantOr(testContextName2);
       await performGetChunksNoMeta(testContextName2);
       await performGetChunksWithMeta(testContextName2);
       await performGetChunksWithMetaNoResults(testContextName2);
-      
+
     }, 300000); // 5 minute total timeout 
   });
 });
@@ -196,17 +205,19 @@ async function performSearchWithMeta(contextName) {
     fullTextWeight: 0.5,
     rrfK: 10,
     includeEmbedding: false,
-    metadataFilters: {$and: [{
-      "testString": {"$eq": "string"},
+    metadataFilters: {
+      $and: [{
+        "testString": {"$eq": "string"},
       }, {
-      "testArray": {"$contains": "testArrayElement1"},
+        "testArray": {"$contains": "testArrayElement1"},
       }, {
-      "testInt": {"$eq": 123},
+        "testInt": {"$eq": 123},
       }, {
-      "testBool": {"$eq": true},
+        "testBool": {"$eq": true},
       }, {
-      "testFloat": {"$eq": 1.4}
-      }]}
+        "testFloat": {"$eq": 1.4}
+      }]
+    }
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
@@ -224,19 +235,23 @@ async function performSearchWithMetaExtendedWithRedundantOr(contextName) {
     fullTextWeight: 0.5,
     rrfK: 10,
     includeEmbedding: false,
-    metadataFilters: {$or: [{$and: [{
-        "testString": {"$eq": "string"},
+    metadataFilters: {
+      $or: [{
+        $and: [{
+          "testString": {"$eq": "string"},
+        }, {
+          "testArray": {"$contains": "testArrayElement1"},
+        }, {
+          "testInt": {"$eq": 123},
+        }, {
+          "testBool": {"$eq": true},
+        }, {
+          "testFloat": {"$eq": 1.4}
+        }]
       }, {
-        "testArray": {"$contains": "testArrayElement1"},
-      }, {
-        "testInt": {"$eq": 123},
-      }, {
-        "testBool": {"$eq": true},
-      }, {
-        "testFloat": {"$eq": 1.4}
-      }]}, {
-      "testString": {"$eq": "mrmagoo"},
-      }]}
+        "testString": {"$eq": "mrmagoo"},
+      }]
+    }
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
@@ -250,7 +265,9 @@ async function performGetChunksWithMeta(contextName) {
     contextName: contextName,
     limit: 20,
     includeEmbedding: false,
-    metadataFilters: {$or: [{$and: [{
+    metadataFilters: {
+      $or: [{
+        $and: [{
           "testString": {"$eq": "string"},
         }, {
           "testArray": {"$contains": "testArrayElement1"},
@@ -260,9 +277,11 @@ async function performGetChunksWithMeta(contextName) {
           "testBool": {"$eq": true},
         }, {
           "testFloat": {"$eq": 1.4}
-        }]}, {
+        }]
+      }, {
         "testString": {"$eq": "mrmagoo"},
-      }]}
+      }]
+    }
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
@@ -277,18 +296,19 @@ async function performGetChunksWithMetaNoResults(contextName) {
     contextName: contextName,
     limit: 20,
     includeEmbedding: false,
-    metadataFilters: {$and: [{
-          "testString": {"$eq": "notWhatWeWant"},
-        }, {
-          "testArray": {"$contains": "notWhatWeWant"},
-        }, {
-          "testInt": {"$eq": 456},
-        }, {
-          "testBool": {"$eq": false},
-        }, {
-          "testFloat": {"$eq": 4.1}
-        }]
-      }
+    metadataFilters: {
+      $and: [{
+        "testString": {"$eq": "notWhatWeWant"},
+      }, {
+        "testArray": {"$contains": "notWhatWeWant"},
+      }, {
+        "testInt": {"$eq": 456},
+      }, {
+        "testBool": {"$eq": false},
+      }, {
+        "testFloat": {"$eq": 4.1}
+      }]
+    }
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
