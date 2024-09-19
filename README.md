@@ -19,11 +19,13 @@ The three primitives OneContext exposes are `Context`, `File`, and `Chunk`. In a
 
 ## Sounds great. How do I get started?
 
-#### Get the SDK from npm
+### Get the SDK from npm
 
 ```bash
 npm install @onecontext/node-sdk
 ```
+
+### Quickstart
 
 #### API Key
 
@@ -31,8 +33,6 @@ Access to the OneContext platform is via an API key. If you already have one, gr
 of your project, or export it from the command line as an environment variable.
 
 If you've misplaced your API key, you can rotate your existing one [here](https://app.onecontext.ai/settings).
-
-### Quickstart
 
 #### Pop your API key in an .env file in the root of the repo (i.e. in the same directory as the package.json)
 
@@ -46,9 +46,13 @@ Add your API key to this .env file like so:
 ONECONTEXT_API_KEY=your_api_key_here
 ```
 
-## Play around
+#### Play around
 
-### Initialise the OneContext client
+For some ready made examples you can just run straight up, clone the [GitHub repo](https://github.com/onecontext/onecontext-typescript), and then open `src/example-folder`.
+
+Or, you can follow the below walk-through step by step.
+
+#### Initialise the OneContext client
 
 ```zsh
 touch construct.ts
@@ -86,7 +90,7 @@ Compile that so you can import it easily for the next examples
 tsc
 ```
 
-### Create a Context
+#### Create a Context
 
 A `Context` is where you store your data. You can think of a `Context` as a "File Store", a "Knowledge Base", a "Second
 Brain", etc..
@@ -106,14 +110,14 @@ try {
 }
 ```
 
-### Throw a load of files at it
+#### Throw a load of files at it
 
 Now you can enrich your context with knowledge. You can make your context an expert in anything, just add files.
 
 If you're on the free plan, you can have just one context, with up to 10 files (of less than 50 pages each). If you're
 on the pro plan, you can have up to 5,000 contexts, each with up to 5,000 files.
 
-#### You can add individual files
+##### You can add individual files
 
 Just add file paths to the array. It's always better to upload multiple files in this way, rather than making multiple
 requests with just one filepath in the array. We can process the jobs much faster (in a batch), and you're far less
@@ -149,7 +153,7 @@ try {
 }
 ```
 
-#### You can also add full directories of files
+##### You can also add full directories of files
 
 Again, you can also (optionally) supply a metadataJson argument, to tag your files with metadata. This metadata will also get
 applied to every chunk created from your files. This will make it easy to filter chunks and files later on at query
@@ -319,7 +323,7 @@ try {
 }
 ```
 
-#### OneContext Structured Query Language
+### OneContext Structured Query Language
 
 OneContext allows you to use a custom "Structured Query Language" to filter
 the chunks in your context.
@@ -328,7 +332,7 @@ The syntax is based around the application of `operators`. There are _two_
 levels of operators. You can interpret the two levels as "aggregators" and
 "comparators".
 
-### Aggregators
+#### Aggregators
 
 The aggregator operators you can use are:
 
@@ -337,7 +341,7 @@ The aggregator operators you can use are:
 | `$and` | Returns True i.f.f. _all_ of the conditions in this block return True. |
 | `$or`  | Returns True if _any_ of the conditions in this block return True.     |
 
-### Comparators
+#### Comparators
 
 The comparator operators you can use are:
 
