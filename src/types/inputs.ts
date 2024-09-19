@@ -20,9 +20,8 @@ export const SetOpenAIKeySchema = z.object({
 /**
  * Schema for deleting files from a context.
  */
-export const DeleteFilesSchema = z.object({
-  contextName: z.string().refine((val: any) => val.trim() !== '', {message: "Context name cannot be empty"}),
-  fileNames: z.array(z.string()).refine((val: any) => val.length > 0, {message: "File names cannot be empty"}),
+export const DeleteFileSchema = z.object({
+  fileId: z.string().refine((val: any) => val.length > 0, {message: "File id cannot be empty"}),
 });
 
 /**
@@ -33,7 +32,7 @@ export const ListFilesSchema = z.object({
   skip: z.number().default(0).optional(),
   limit: z.number().default(10).optional(),
   sort: z.string().default("date_created").optional(),
-  metadataJson: z.object({}).default({}).optional(),
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
 });
 
 /**
@@ -96,11 +95,23 @@ export const ContextDeleteSchema = z.object({
 export const ListContext = z.object({});
 
 /**
+ * Schema for filtering a context, and defining the parameters for said filter
+ */
+export const ContextGet = z.object({
+  contextName: z.string(),
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
+  limit: z.union([z.number().refine((val) => val > 0, {message: "Limit must be greater than 0"}), z.null()]),
+  includeEmbedding: z.boolean().default(false).optional()
+})
+
+/**
  * Schema for searching through a context, and defining the parameters for said search
  */
 export const ContextSearch = z.object({
-  query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the getChunks method!"}),
+  query: z.string().refine((val) => val.trim() !== '', {message: "The query cannot be empty. If you want to just retrieve chunks without a query, try the ContextGet method!"}),
   contextName: z.string(),
+  // TODO - add stricter type for this (it's on the backend, move it over here')
+  metadataFilters: z.record(z.string(),z.any()).default({}).optional(),
   topK: z.union([z.number().refine((val) => val > 0, {message: "Top k must be greater than 0"}), z.null()]),
   semanticWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Semantic weight must be between 0 and 1"}).default(0.5).optional(),
   fullTextWeight: z.number().refine((val) => val >= 0 && val <= 1, {message: "Full text weight must be between 0 and 1"}).default(0.5).optional(),
@@ -120,8 +131,15 @@ export const UploadFilesSchema = z.object({
   files: z.array(FileSchema),
   stream: z.boolean().default(false).optional(),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Context name cannot be empty"}),
-  metadataJson: z.object({}).optional(),
+  metadataJson: z.record(z.string(),z.any()).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
+});
+
+/**
+ * Schema for requesting a download url 
+ */
+export const DownloadUrlRequestSchema = z.object({
+  fileId: z.string(),
 });
 
 /**
@@ -130,7 +148,7 @@ export const UploadFilesSchema = z.object({
 export const UploadDirectorySchema = z.object({
   directory: z.string().refine((val) => val.endsWith("/"), {message: "Directory must end with /"}),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Knowledge Base name cannot be empty"}),
-  metadataJson: z.object({}).optional(),
+  metadataJson: z.record(z.string(),z.any()).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
 });
 
@@ -139,9 +157,11 @@ export type ContentFile = z.infer<typeof ContentFileSchema>;
 export type PathFile = z.infer<typeof PathFileSchema>;
 export type ContextCreateType = z.infer<typeof ContextCreateSchema>
 export type ContextDeleteType = z.infer<typeof ContextDeleteSchema>
+export type ContextGetType = z.infer<typeof ContextGet>
 export type ContextSearchType = z.infer<typeof ContextSearch>
 export type ListFilesType = z.infer<typeof ListFilesSchema>
-export type DeleteFilesType = z.infer<typeof DeleteFilesSchema>
+export type DeleteFileType = z.infer<typeof DeleteFileSchema>
 export type UploadFilesType = z.infer<typeof UploadFilesSchema>
 export type UploadDirectoryType = z.infer<typeof UploadDirectorySchema>
 export type SetOpenAIApiKeyType = z.infer<typeof SetOpenAIKeySchema>
+export type DownloadUrlType = z.infer<typeof DownloadUrlRequestSchema>

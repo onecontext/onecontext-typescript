@@ -7,16 +7,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, '..', '..', '.env');
 dotenv.config({path: envPath});
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = process.env.ONECONTEXT_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const BASE_URL = process.env.BASE_URL;
 
 // Check if required environment variables are set
-if (!API_KEY || !OPENAI_API_KEY) {
+if (!API_KEY ) {
   console.error('Missing required environment variables. Please check your .env file.');
   process.exit(1);
 }
 
-const ocClient = new OneContextClient(API_KEY, OPENAI_API_KEY, BASE_URL);
+const ocClient = new OneContextClient({apiKey: API_KEY, baseUrl: BASE_URL});
 
 export default ocClient;

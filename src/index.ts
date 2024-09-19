@@ -20,10 +20,10 @@ export class OneContextClient {
    * @param openAiKey - Optional OpenAI API key.
    * @param baseUrl - The base URL for the OneContext API.
    */
-  constructor(apiKey: string, openAiKey?: string, baseUrl?: string) {
+  constructor({apiKey, openAiKey, baseUrl}:{apiKey: string, openAiKey?: string, baseUrl?: string}) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
-    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
+    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v3/";
   }
 
   /**
@@ -101,7 +101,7 @@ export class OneContextClient {
    * }
    */
   async createContext(args: inputTypes.ContextCreateType): Promise<Response> {
-    return this.request('context/create', {
+    return this.request('context', {
       method: 'POST',
       body: JSON.stringify(args),
     });
@@ -130,8 +130,9 @@ export class OneContextClient {
    *
    */
   async deleteContext(args: inputTypes.ContextDeleteType): Promise<Response> {
-    return this.request(`context/delete/${args.contextName}`, {
+    return this.request(`context`, {
       method: 'DELETE',
+      body: JSON.stringify(args),
     });
   }
 
@@ -141,9 +142,9 @@ export class OneContextClient {
    * @example
    * try {
    *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
-   *   const result = await ocClient.listFiles({contextName: "contextName"})
+   *   const result = await ocClient.contextList()
    *   if (result.ok) {
-   *     await result.json().then((data) => console.log(`Contexts for you user:`, data));
+   *     await result.json().then((data) => console.log(`Contexts for your user:`, data));
    *   } else {
    *     console.error('Error fetching list of contexts');
    *   }
@@ -153,7 +154,7 @@ export class OneContextClient {
    *
    */
   async contextList(): Promise<Response> {
-    return this.request('context/list', {
+    return this.request('context', {
       method: 'GET',
     });
   }
@@ -169,6 +170,7 @@ export class OneContextClient {
    *     {
    *       "query": "An example query you can use to search through all the data in your context",
    *       "contextName": "contextName",
+   *       "metadataFilters": {$and : [{age: {$eq: 100}}, {name: {$contains: "an_old_person"}}]},
    *       "topK": 20,
    *       "semanticWeight": 0.5,
    *       "fullTextWeight": 0.5,
@@ -186,7 +188,41 @@ export class OneContextClient {
    * }
    */
   async contextSearch(args: inputTypes.ContextSearchType): Promise<Response> {
-    return this.request('embeddings/get', {
+    return this.request('context/chunk/search', {
+      method: 'POST',
+      body: JSON.stringify(args),
+      headers: {
+        "Content-Type": "application/json"
+      },
+    });
+  }
+  
+  /**
+   * Filters within a context.
+   * @param args - The arguments for returning chunks from a context.
+   * @returns The response from the API containing the chunks.
+   * @example
+   * try {
+   *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
+   *   const result = await ocClient.contextFilter(
+   *     {
+   *       "contextName": "contextName",
+   *       "limit": 20,
+   *       "metadataFilters": {$and : [{age: {$eq: 100}}, {name: {$contains: "an_old_person"}}]},
+   *       "includeEmbedding": false
+   *     }
+   *   )
+   *   if (result.ok) {
+   *     await result.json().then((data) => console.log('Filter results:', data));
+   *   } else {
+   *     console.error('Error searching context.');
+   *   }
+   * } catch (error) {
+   *   console.error('Error searching context.', error);
+   * }
+   */
+  async contextGet(args: inputTypes.ContextGetType): Promise<Response> {
+    return this.request('context/chunk', {
       method: 'POST',
       body: JSON.stringify(args),
       headers: {
@@ -196,16 +232,31 @@ export class OneContextClient {
   }
 
   /**
-   * Deletes files from a context.
-   * @param args - The arguments for deleting files.
+   * Deletes files.
+   * @param args - The arguments for deleting a file.
    * @returns The response from the API.
+   * @example
+   * try {
+   *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
+   *   const result = await ocClient.deleteFile(
+   *     {
+   *       "fileId": "example_file_id",
+   *     }
+   *   )
+   *   if (result.ok) {
+   *     await result.json().then((data) => console.log('Successfully deleted:', data));
+   *   } else {
+   *     console.error('Error deleting file.');
+   *   }
+   * } catch (error) {
+   *   console.error('Error deleting file.', error);
+   * }
    */
-  async deleteFiles(args: inputTypes.DeleteFilesType): Promise<Response> {
+  async deleteFile(args: inputTypes.DeleteFileType): Promise<Response> {
     const renamedArgs = {
-      file_names: args.fileNames,
-      knowledgebase_name: args.contextName,
+      fileId: args.fileId,
     };
-    return this.request('files', {
+    return this.request('context/file', {
       method: 'DELETE',
       body: JSON.stringify(renamedArgs),
     });
@@ -217,11 +268,25 @@ export class OneContextClient {
    * @returns The response from the API containing the list of files.
    */
   async listFiles(args: inputTypes.ListFilesType): Promise<Response> {
-    return this.request('context/files/list', {
+    return this.request('context/file', {
       method: 'POST',
       body: JSON.stringify(args),
     });
   }
+
+
+  /**
+   * Get a download URL for a particular file id.
+   * @param args - The file id.
+   * @returns A download url.
+   */
+  async getDownloadUrl(args: inputTypes.DownloadUrlType): Promise<Response> {
+    return this.request('context/file/download', {
+      method: 'POST',
+      body: JSON.stringify(args),
+    });
+  }
+  
   
   private async * fileGenerator(directory: string) {
     async function* walkDirectory(dir: string): AsyncGenerator<{ path: string, name: string }> {
@@ -271,19 +336,25 @@ export class OneContextClient {
    */
   async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
     const formData = new FormData();
+    
+    let fileCount = 0
 
     for await (const { stream, name } of this.fileGenerator(args.directory)) {
+      fileCount++;
       formData.append('files', stream, name);
     }
 
-    formData.append('context_name', args.contextName);
-    formData.append('max_chunk_size', args.maxChunkSize);
+    formData.append('contextName', args.contextName);
+    formData.append('maxChunkSize', args.maxChunkSize);
 
     if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+      const metadataArray = new Array(fileCount).fill(args.metadataJson);
+      metadataArray.forEach(metadata => {
+        formData.append('metadataJson', JSON.stringify(metadata));
+      });
     }
 
-    return this.request('jobs/files/add', {
+    return this.request('context/file/upload', {
       method: 'POST',
       body: formData,
       headers: formData.getHeaders(),
@@ -347,14 +418,17 @@ export class OneContextClient {
       }
     }
 
-    formData.append('context_name', args.contextName);
+    formData.append('contextName', args.contextName);
     formData.append('maxChunkSize', args.maxChunkSize);
 
     if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
+      const metadataArray = new Array(args.files.length).fill(args.metadataJson);
+      metadataArray.forEach(metadata => {
+        formData.append('metadataJson', JSON.stringify(metadata));
+      });
     }
 
-    return this.request('jobs/files/add', {
+    return this.request('context/file/upload', {
       method: 'POST',
       body: formData,
       headers: formData.getHeaders(),
