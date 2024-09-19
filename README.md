@@ -1,6 +1,6 @@
 # Official OneContext TypeScript SDK
 
-This is the official TypeScript SDK for the OneContext platform. Use this SDK to connect your Node backend applications,
+This is the official Node.js SDK for the OneContext platform. Use this SDK to connect your Node backend applications,
 and Node CLI tools, to OneContext's platform.
 
 ## What is OneContext?
@@ -16,7 +16,7 @@ models, GPUs, autoscaling, load balancing, etc).
 #### Get the SDK from npm
 
 ```bash
-npm install @onecontext/ts-sdk-v2
+npm install @onecontext/node-sdk
 ```
 
 #### API Key
@@ -51,7 +51,7 @@ touch construct.ts
 Add the below into that file
 
 ```ts
-import {OneContextClient} from "@onecontext/ts-sdk-v2"
+import {OneContextClient} from "@onecontext/node-sdk"
 import * as dotenv from 'dotenv';
 import {fileURLToPath} from 'url';
 import path from 'path';
