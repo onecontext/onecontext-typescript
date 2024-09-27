@@ -10,7 +10,6 @@ try {
     res.json().then((data: any) => console.log('Directory uploaded:', data));
   } else {
     console.error('Error uploading directory.');
-    console.log(res)
   }
 } catch (error) {
   console.error('Error fetching context list:', error);

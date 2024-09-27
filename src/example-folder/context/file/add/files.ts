@@ -14,5 +14,5 @@ try {
     console.error('Error uploading files.');
   }
 } catch (error) {
-  console.error('Error fetching context list:', error);
+  console.error('Error uploading files:', error);
 }

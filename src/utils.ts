@@ -1,4 +1,5 @@
 import {performance} from 'perf_hooks';
+import * as path from 'path';
 
 const colors = {
   reset: "\x1b[0m",
@@ -66,4 +67,22 @@ export const runMany = async ({n, callable, callableArgs}: {
   return results;
 }
 
+// Simple MIME type mapping
+export const getMimeType = (filePath: string): string => {
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes: { [key: string]: string } = {
+    '.txt': 'text/plain',
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    // Add more as needed
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+};
 

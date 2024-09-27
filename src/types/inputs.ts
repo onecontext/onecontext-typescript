@@ -148,7 +148,7 @@ export const DownloadUrlRequestSchema = z.object({
 export const UploadDirectorySchema = z.object({
   directory: z.string().refine((val) => val.endsWith("/"), {message: "Directory must end with /"}),
   contextName: z.string().refine((val) => val.trim() !== '', {message: "Knowledge Base name cannot be empty"}),
-  metadataFilters: z.object({}).optional(),
+  metadataJson: z.object({}).optional(),
   maxChunkSize: z.number().refine((val) => val > 0, {message: "Max chunk size must be greater than 0"}).default(600).optional()
 });
 

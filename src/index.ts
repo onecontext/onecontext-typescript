@@ -4,7 +4,11 @@ import {promises as fs} from 'fs';
 import { createReadStream } from 'fs';
 import * as path from "path";
 import * as inputTypes from "./types/inputs.js";
+import * as outputTypes from "./types/outputs.js";
+import * as utils from "./utils.js";
 import {Readable} from "stream";
+import {GeneratePresignedResponse} from "./types/outputs.js";
+import { v4 as uuidv4 } from 'uuid';
 
 export * from './utils.js';
 
@@ -20,10 +24,10 @@ export class OneContextClient {
    * @param openAiKey - Optional OpenAI API key.
    * @param baseUrl - The base URL for the OneContext API.
    */
-  constructor(apiKey: string, openAiKey?: string, baseUrl?: string) {
+  constructor({apiKey, openAiKey, baseUrl}:{apiKey: string, openAiKey?: string, baseUrl?: string}) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
-    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v2/";
+    this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v3/";
   }
 
   /**
@@ -101,7 +105,7 @@ export class OneContextClient {
    * }
    */
   async createContext(args: inputTypes.ContextCreateType): Promise<Response> {
-    return this.request('context/create', {
+    return this.request('context', {
       method: 'POST',
       body: JSON.stringify(args),
     });
@@ -130,8 +134,9 @@ export class OneContextClient {
    *
    */
   async deleteContext(args: inputTypes.ContextDeleteType): Promise<Response> {
-    return this.request(`context/delete/${args.contextName}`, {
+    return this.request(`context`, {
       method: 'DELETE',
+      body: JSON.stringify(args),
     });
   }
 
@@ -141,9 +146,9 @@ export class OneContextClient {
    * @example
    * try {
    *   const ocClient = new OneContextClient(BASE_URL, API_KEY);
-   *   const result = await ocClient.listFiles({contextName: "contextName"})
+   *   const result = await ocClient.contextList()
    *   if (result.ok) {
-   *     await result.json().then((data) => console.log(`Contexts for you user:`, data));
+   *     await result.json().then((data) => console.log(`Contexts for your user:`, data));
    *   } else {
    *     console.error('Error fetching list of contexts');
    *   }
@@ -335,19 +340,25 @@ export class OneContextClient {
    */
   async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
     const formData = new FormData();
+    
+    let fileCount = 0
 
     for await (const { stream, name } of this.fileGenerator(args.directory)) {
+      fileCount++;
       formData.append('files', stream, name);
     }
 
-    formData.append('context_name', args.contextName);
-    formData.append('max_chunk_size', args.maxChunkSize);
+    formData.append('contextName', args.contextName);
+    formData.append('maxChunkSize', args.maxChunkSize);
 
-    if (args.metadataFilters) {
-      formData.append('metadata_json', JSON.stringify(args.metadataFilters));
+    if (args.metadataJson) {
+      const metadataArray = new Array(fileCount).fill(args.metadataJson);
+      metadataArray.forEach(metadata => {
+        formData.append('metadataJson', JSON.stringify(metadata));
+      });
     }
 
-    return this.request('jobs/files/add', {
+    return this.request('context/file/upload', {
       method: 'POST',
       body: formData,
       headers: formData.getHeaders(),
@@ -355,7 +366,7 @@ export class OneContextClient {
   }
 
   /**
-   * Uploads files to a context.
+   * Uploads files to a context using presigned URLs.
    * @param args - The arguments for uploading files.
    * @returns The response from the API.
    * @example
@@ -364,65 +375,102 @@ export class OneContextClient {
    *   ocClient.uploadFiles({
    *     files: [{path: "path/to/file1.pdf"}, {path: "path/to/file2.pdf"}],
    *     contextName: "contextName",
-   *     stream: false,
-   *     maxChunkSize: 400
+   *     contextId: "contextId",
+   *     maxChunkSize: 600
    *   }).then((res: any) => {
    *     if (res.ok) {
-   *       res.json().then((data: any) => console.log('File uploaded:', data));
+   *       res.json().then((data: any) => console.log('Files processed:', data));
    *     } else {
-   *       console.error('Error uploading files.');
+   *       console.error('Error processing files.');
    *     }
    *   })
    *
    * } catch (error) {
-   *   console.error('Error uploading files:', error);
+   *   console.error('Error uploading and processing files:', error);
    * }
    */
   async uploadFiles(args: inputTypes.UploadFilesType): Promise<Response> {
-    const formData = new FormData();
-
-    for (const file of args.files) {
-      if (args.stream) {
-        if (!file || !('readable' in file) || !(file.readable instanceof Readable)) {
-          console.error('Invalid file object for stream mode:', file);
-          throw new Error('Invalid file object for stream mode');
-        }
-        const f = file as inputTypes.ContentFile;
-        formData.append('files', f.readable, {
-          filename: f.name || 'unnamed_file',
-          contentType: 'text/plain',
-        });
-      } else {
-        if (!file || !('path' in file) || typeof file.path !== 'string') {
-          console.error('Invalid file object for non-stream mode:', file);
-          throw new Error('Invalid file object for non-stream mode');
-        }
-        const f = file as inputTypes.PathFile;
-        try {
-          // Check if the file exists
-          await fs.access(f.path);
-          const filename = path.basename(f.path);
-          const fileStream = await fs.readFile(f.path);
-          formData.append('files', fileStream, filename);
-        } catch (error) {
-          console.error(`File does not exist or is not accessible: ${f.path}`);
-          throw new Error(`File does not exist or is not accessible: ${f.path}`);
-        }
-      }
-    }
-
-    formData.append('context_name', args.contextName);
-    formData.append('maxChunkSize', args.maxChunkSize);
-
-    if (args.metadataJson) {
-      formData.append('metadata_json', JSON.stringify(args.metadataJson));
-    }
-
-    return this.request('jobs/files/add', {
+    // Step 1: Get presigned URLs for all files
+    const fileNames = args.files.map(file => 'path' in file ? path.basename(file.path) : file.name || 'unnamed_file');
+    const presignedUrlsResponse = await this.request('context/file/presigned-upload-url', {
       method: 'POST',
-      body: formData,
-      headers: formData.getHeaders(),
+      body: JSON.stringify({
+        fileNames,
+        contextName: args.contextName,
+      }),
     });
+
+    if (!presignedUrlsResponse.ok) {
+      throw new Error('Failed to get presigned URLs');
+    }
+
+    const presignedResponse = await presignedUrlsResponse.json();
+    const presignedResponseData = outputTypes.generatePresignedResponseSchema.safeParse(presignedResponse);
+    if (!presignedResponseData.success) {
+      throw new Error('Invalid response from server while obtaining presigned upload URLs');
+    }
+    
+    const data = presignedResponseData.data as GeneratePresignedResponse;
+    
+    const uploadPromises = args.files.map(async (file, index) => {
+      const { presignedUrl, fileId, gcsUri } = data[index];
+      let fileContent: Buffer | Readable;
+      let fileName: string;
+      let fileType: string;
+
+      if ('path' in file) {
+        // File is a PathFile
+        fileName = path.basename(file.path);
+        fileContent = await fs.readFile(file.path);
+        fileType = utils.getMimeType(file.path);
+      } else if ('readable' in file) {
+        // File is a ContentFile
+        fileName = file.name || uuidv4() as string; 
+        fileContent = file.readable;
+        fileType = file.type || 'application/octet-stream';
+      } else {
+        throw new Error('Invalid file object');
+      }
+
+      try {
+        const uploadResponse = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: fileContent,
+          headers: { 'Content-Type': fileType },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed with status ${uploadResponse.status}`);
+        }
+
+        return {
+          fileId,
+          fileName,
+          fileType,
+          gcsUri,
+        };
+      } catch (error) {
+        console.error(`Error uploading file ${fileName}:`, error);
+        return null;
+      }
+    });
+
+    const uploadResults = await Promise.all(uploadPromises);
+    const successfulUploads = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
+    
+    // Step 3: Send batch process request
+    if (successfulUploads.length > 0) {
+      return this.request('context/file/process-uploaded', {
+        method: 'POST',
+        body: JSON.stringify({
+          files: successfulUploads,
+          contextName: args.contextName,
+          maxChunkSize: args.maxChunkSize,
+        }),
+      });
+    } else {
+      throw new Error('No files were successfully uploaded');
+    }
   }
 
   /**
