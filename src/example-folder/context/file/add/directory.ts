@@ -3,7 +3,7 @@ import ocClient from '../../../construct.js';
 try {
   const res = await ocClient.uploadDirectory({
     directory: "/Users/rossmurphy/embedding_example/embedpdf/",
-    contextName: "example",
+    contextName: "ross",
     maxChunkSize: 400
   })
   if (res.ok) {

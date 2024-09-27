@@ -290,8 +290,8 @@ export class OneContextClient {
       body: JSON.stringify(args),
     });
   }
-  
-  
+
+
   private async * fileGenerator(directory: string) {
     async function* walkDirectory(dir: string): AsyncGenerator<{ path: string, name: string }> {
       const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -309,8 +309,7 @@ export class OneContextClient {
     }
 
     for await (const file of walkDirectory(directory)) {
-      const stream = createReadStream(file.path);
-      yield { stream, name: file.name };
+      yield { path: file.path, name: file.name };
     }
   }
 
@@ -339,29 +338,21 @@ export class OneContextClient {
    *}
    */
   async uploadDirectory(args: inputTypes.UploadDirectoryType): Promise<Response> {
-    const formData = new FormData();
-    
-    let fileCount = 0
+    const files: inputTypes.PathFile[] = [];
 
-    for await (const { stream, name } of this.fileGenerator(args.directory)) {
-      fileCount++;
-      formData.append('files', stream, name);
+    for await (const file of this.fileGenerator(args.directory)) {
+      files.push({ path: file.path });
     }
 
-    formData.append('contextName', args.contextName);
-    formData.append('maxChunkSize', args.maxChunkSize);
-
-    if (args.metadataJson) {
-      const metadataArray = new Array(fileCount).fill(args.metadataJson);
-      metadataArray.forEach(metadata => {
-        formData.append('metadataJson', JSON.stringify(metadata));
-      });
+    if (files.length === 0) {
+      throw new Error('No valid files found in the directory');
     }
 
-    return this.request('context/file/upload', {
-      method: 'POST',
-      body: formData,
-      headers: formData.getHeaders(),
+    return this.uploadFiles({
+      files,
+      contextName: args.contextName,
+      maxChunkSize: args.maxChunkSize,
+      metadataJson: args.metadataJson
     });
   }
 
