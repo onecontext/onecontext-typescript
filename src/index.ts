@@ -1,13 +1,13 @@
-import fetch, {RequestInit, Response} from 'node-fetch';
+import fetch, { RequestInit, Response } from 'node-fetch';
 import FormData from 'form-data';
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 import { createReadStream } from 'fs';
 import * as path from "path";
 import * as inputTypes from "./types/inputs.js";
 import * as outputTypes from "./types/outputs.js";
 import * as utils from "./utils.js";
-import {Readable} from "stream";
-import {GeneratePresignedResponse} from "./types/outputs.js";
+import { Readable } from "stream";
+import { GeneratePresignedResponse } from "./types/outputs.js";
 import { v4 as uuidv4 } from 'uuid';
 
 export * from './utils.js';
@@ -24,7 +24,7 @@ export class OneContextClient {
    * @param openAiKey - Optional OpenAI API key.
    * @param baseUrl - The base URL for the OneContext API.
    */
-  constructor({apiKey, openAiKey, baseUrl}:{apiKey: string, openAiKey?: string, baseUrl?: string}) {
+  constructor({ apiKey, openAiKey, baseUrl }: { apiKey: string, openAiKey?: string, baseUrl?: string }) {
     this.apiKey = apiKey;
     this.openAiKey = openAiKey;
     this.baseUrl = baseUrl || "https://app.onecontext.ai/api/v3/";
@@ -40,7 +40,7 @@ export class OneContextClient {
   private async request(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const url = new URL(endpoint, this.baseUrl).toString();
     // Create a new headers object
-    const headers = new Headers({...options.headers});
+    const headers = new Headers({ ...options.headers });
 
     // Add the API key
     headers.set("API-KEY", this.apiKey);
@@ -200,7 +200,7 @@ export class OneContextClient {
       },
     });
   }
-  
+
   /**
    * Filters within a context.
    * @param args - The arguments for returning chunks from a context.
@@ -400,9 +400,9 @@ export class OneContextClient {
     if (!presignedResponseData.success) {
       throw new Error('Invalid response from server while obtaining presigned upload URLs');
     }
-    
+
     const data = presignedResponseData.data as GeneratePresignedResponse;
-    
+
     const uploadPromises = args.files.map(async (file, index) => {
       const { presignedUrl, fileId, gcsUri } = data[index];
       let fileContent: Buffer | Readable;
@@ -416,7 +416,7 @@ export class OneContextClient {
         fileType = utils.getMimeType(file.path);
       } else if ('readable' in file) {
         // File is a ContentFile
-        fileName = file.name || uuidv4() as string; 
+        fileName = file.name || uuidv4() as string;
         fileContent = file.readable;
         fileType = file.type || 'application/octet-stream';
       } else {
@@ -448,7 +448,7 @@ export class OneContextClient {
 
     const uploadResults = await Promise.all(uploadPromises);
     const successfulUploads = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
-    
+
     // Step 3: Send batch process request
     if (successfulUploads.length > 0) {
       return this.request('context/file/process-uploaded', {
