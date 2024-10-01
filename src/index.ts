@@ -405,6 +405,9 @@ export class OneContextClient {
 
     const uploadPromises = args.files.map(async (file, index) => {
       const { presignedUrl, fileId, gcsUri } = data[index];
+      // only one metadataJson for all files in this upload batch
+      // i.e. the type is a singular object, not an array of objects (for now)
+      const metadataJson = args.metadataJson 
       let fileContent: Buffer | Readable;
       let fileName: string;
       let fileType: string;
@@ -439,6 +442,7 @@ export class OneContextClient {
           fileName,
           fileType,
           gcsUri,
+          metadataJson
         };
       } catch (error) {
         console.error(`Error uploading file ${fileName}:`, error);

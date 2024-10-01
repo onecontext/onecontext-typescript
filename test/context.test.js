@@ -4,6 +4,8 @@ import * as dotenv from 'dotenv';
 import {fileURLToPath} from 'url';
 import path from 'path';
 import fs from 'fs/promises';
+import {z} from "zod";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, '..', '.env');
 dotenv.config({path: envPath});
@@ -17,6 +19,8 @@ if (!API_KEY || !OPENAI_API_KEY) {
   console.error('Missing required environment variables. Please check your .env file.');
   process.exit(1);
 }
+
+console.log({BASE_URL})
 
 const ocClient = new OneContextClient({apiKey: API_KEY, openAiKey: OPENAI_API_KEY, baseUrl: BASE_URL});
 
@@ -74,6 +78,13 @@ describe('Context Operations', () => {
           contextName: testContextName1,
           stream: false,
           files: filePaths,
+          metadataJson: {
+            "testString": "string",
+            "testArray": ["testArrayElement1", "testArrayElement2"],
+            "testInt": 123,
+            "testBool": true,
+            "testFloat": 1.4
+          },
           maxChunkSize: 500, // 500B chunk size as per your previous modification
         });
 
@@ -85,10 +96,18 @@ describe('Context Operations', () => {
         await waitForProcessing(testContextName1);
 
         // Perform search
-        await performSearch(testContextName1);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds before trying to search
+
+        await performSearchNoMeta(testContextName1);
+        await performSearchWithMeta(testContextName1);
+        await performSearchWithMetaExtendedWithRedundantOr(testContextName1);
+        await performGetChunksNoMeta(testContextName1);
+        await performGetChunksWithMeta(testContextName1);
+        await performGetChunksWithMetaNoResults(testContextName1);
       } finally {
+
       }
-    }, 240000); // 4 minute total timeout 
+    }, 300000); // 5 minute total timeout 
   });
 
   describe('uploadDirectory method', () => {
@@ -104,7 +123,14 @@ describe('Context Operations', () => {
       const uploadResult = await ocClient.uploadDirectory({
         contextName: testContextName2,
         directory: testFilesDir,
-        maxChunkSize: 500, // 500B chunk size as per your modification
+        metadataJson: {
+          "testString": "string",
+          "testArray": ["testArrayElement1", "testArrayElement2"],
+          "testInt": 123,
+          "testBool": true,
+          "testFloat": 1.4
+        },
+        maxChunkSize: 500, // 500 character chunk size
       });
       expect(uploadResult.ok).toBe(true);
       const uploadData = await uploadResult.json();
@@ -115,15 +141,35 @@ describe('Context Operations', () => {
       await waitForProcessing(testContextName2);
 
       // Perform search
-      await performSearch(testContextName2);
-    }, 240000); // 4 minute total timeout 
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds before trying to search
+
+      await performSearchNoMeta(testContextName2);
+      await performSearchWithMeta(testContextName2);
+      await performSearchWithMetaExtendedWithRedundantOr(testContextName2);
+      await performGetChunksNoMeta(testContextName2);
+      await performGetChunksWithMeta(testContextName2);
+      await performGetChunksWithMetaNoResults(testContextName2);
+
+    }, 300000); // 5 minute total timeout 
   });
+});
+
+describe('context list method', () => {
+  test('should list contexts', async () => {
+    // Create context
+    const listResult = await ocClient.contextList();
+    expect(listResult.ok).toBe(true);
+    const listData = await listResult.json();
+    expect(listData).toBeDefined();
+
+  }, 60000); // 1 minute timeout 
 });
 
 async function waitForProcessing(contextName) {
   let allFilesProcessed = false;
   let attempts = 0;
-  const maxAttempts = 5; // 5*15 seconds total wait time 
+  const maxAttempts = 6; // 
+  const waitTime = 20000; // 15 seconds
 
   while (!allFilesProcessed && attempts < maxAttempts) {
     const listResult = await ocClient.listFiles({contextName: contextName});
@@ -134,7 +180,7 @@ async function waitForProcessing(contextName) {
     allFilesProcessed = listData.files.every(file => file.status === 'COMPLETED');
 
     if (!allFilesProcessed) {
-      await new Promise(resolve => setTimeout(resolve, 15000)); // Wait for 15 seconds before checking again
+      await new Promise(resolve => setTimeout(resolve, waitTime)); // Wait for waitTime seconds before checking again
       attempts++;
     }
   }
@@ -144,12 +190,11 @@ async function waitForProcessing(contextName) {
   }
 }
 
-async function performSearch(contextName) {
-  await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for 2 seconds before trying to search
+async function performSearchNoMeta(contextName) {
   const searchResult = await ocClient.contextSearch({
     query: "test content",
     contextName: contextName,
-    topK: 20,
+    topK: 5,
     semanticWeight: 0.5,
     fullTextWeight: 0.5,
     rrfK: 10,
@@ -157,8 +202,141 @@ async function performSearch(contextName) {
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
-  console.log({searchData});
-  const results = searchData;
-  expect(results).toBeDefined();
-  expect(results.length).toBeGreaterThan(0);
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBeGreaterThan(0);
+}
+
+async function performSearchWithMeta(contextName) {
+  const searchResult = await ocClient.contextSearch({
+    query: "test content",
+    contextName: contextName,
+    topK: 5,
+    semanticWeight: 0.5,
+    fullTextWeight: 0.5,
+    rrfK: 10,
+    includeEmbedding: false,
+    metadataFilters: {
+      $and: [{
+        "testString": {"$eq": "string"},
+      }, {
+        "testArray": {"$contains": "testArrayElement1"},
+      }, {
+        "testInt": {"$eq": 123},
+      }, {
+        "testBool": {"$eq": true},
+      }, {
+        "testFloat": {"$eq": 1.4}
+      }]
+    }
+  });
+  expect(searchResult.ok).toBe(true);
+  const searchData = await searchResult.json();
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBeGreaterThan(0);
+}
+
+async function performSearchWithMetaExtendedWithRedundantOr(contextName) {
+  const searchResult = await ocClient.contextSearch({
+    query: "test content",
+    contextName: contextName,
+    topK: 5,
+    semanticWeight: 0.5,
+    fullTextWeight: 0.5,
+    rrfK: 10,
+    includeEmbedding: false,
+    metadataFilters: {
+      $or: [{
+        $and: [{
+          "testString": {"$eq": "string"},
+        }, {
+          "testArray": {"$contains": "testArrayElement1"},
+        }, {
+          "testInt": {"$eq": 123},
+        }, {
+          "testBool": {"$eq": true},
+        }, {
+          "testFloat": {"$eq": 1.4}
+        }]
+      }, {
+        "testString": {"$eq": "mrmagoo"},
+      }]
+    }
+  });
+  expect(searchResult.ok).toBe(true);
+  const searchData = await searchResult.json();
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBeGreaterThan(0);
+}
+
+async function performGetChunksWithMeta(contextName) {
+  const searchResult = await ocClient.contextGet({
+    contextName: contextName,
+    limit: 5,
+    includeEmbedding: false,
+    metadataFilters: {
+      $or: [{
+        $and: [{
+          "testString": {"$eq": "string"},
+        }, {
+          "testArray": {"$contains": "testArrayElement1"},
+        }, {
+          "testInt": {"$eq": 123},
+        }, {
+          "testBool": {"$eq": true},
+        }, {
+          "testFloat": {"$eq": 1.4}
+        }]
+      }, {
+        "testString": {"$eq": "mrmagoo"},
+      }]
+    }
+  });
+  expect(searchResult.ok).toBe(true);
+  const searchData = await searchResult.json();
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBeGreaterThan(0);
+}
+
+async function performGetChunksWithMetaNoResults(contextName) {
+  // this function should return an empty list
+  const searchResult = await ocClient.contextGet({
+    contextName: contextName,
+    limit: 5,
+    includeEmbedding: false,
+    metadataFilters: {
+      $and: [{
+        "testString": {"$eq": "notWhatWeWant"},
+      }, {
+        "testArray": {"$contains": "notWhatWeWant"},
+      }, {
+        "testInt": {"$eq": 456},
+      }, {
+        "testBool": {"$eq": false},
+      }, {
+        "testFloat": {"$eq": 4.1}
+      }]
+    }
+  });
+  expect(searchResult.ok).toBe(true);
+  const searchData = await searchResult.json();
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBe(0);
+}
+
+async function performGetChunksNoMeta(contextName) {
+  const searchResult = await ocClient.contextGet({
+    contextName: contextName,
+    limit: 5,
+    includeEmbedding: false,
+  });
+  expect(searchResult.ok).toBe(true);
+  const searchData = await searchResult.json();
+  console.log({searchData})
+  expect(searchData).toBeDefined();
+  expect(searchData.length).toBeGreaterThan(0);
 }
