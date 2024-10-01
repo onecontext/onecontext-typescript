@@ -232,7 +232,6 @@ async function performSearchWithMeta(contextName) {
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
-  console.log({searchData})
   expect(searchData).toBeDefined();
   expect(searchData.length).toBeGreaterThan(0);
 }
