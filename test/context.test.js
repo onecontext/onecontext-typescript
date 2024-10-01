@@ -157,7 +157,8 @@ async function performSearch(contextName) {
   });
   expect(searchResult.ok).toBe(true);
   const searchData = await searchResult.json();
-  const results = searchData.data;
+  console.log({searchData});
+  const results = searchData;
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);
 }
